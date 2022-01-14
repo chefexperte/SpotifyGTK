@@ -1,0 +1,29 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<!DOCTYPE cambalache-project SYSTEM "cambalache-project.dtd">
+<cambalache-project version="0.8.1" target_tk="gtk-4.0">
+  <ui>
+	(1,None,"spotify.ui","spotify.ui",None,None,None,None,None,None)
+  </ui>
+  <object>
+	(1,1,"GtkWindow","window",None,None,None,None,None),
+	(1,2,"GtkBox",None,1,None,None,None,-1),
+	(1,3,"GtkLabel",None,2,None,None,None,None),
+	(1,5,"GtkSearchEntry",None,2,None,None,None,1),
+	(1,6,"GtkScale",None,2,None,None,None,2),
+	(1,7,"GtkAdjustment","playerAdjust",6,None,None,None,None)
+  </object>
+  <object_property>
+	(1,2,"GtkOrientable","orientation","vertical",None,None,None,None),
+	(1,3,"GtkLabel","label","Spotify",None,None,None,None),
+	(1,3,"GtkWidget","can-focus","False",None,None,None,None),
+	(1,3,"GtkWidget","can-target","False",None,None,None,None),
+	(1,3,"GtkWidget","focus-on-click","False",None,None,None,None),
+	(1,3,"GtkWidget","halign","start",None,None,None,None),
+	(1,6,"GtkRange","adjustment","7",None,None,None,None),
+	(1,6,"GtkRange","fill-level","100.0",None,None,None,None),
+	(1,6,"GtkWidget","valign","end",None,None,None,None),
+	(1,6,"GtkWidget","vexpand","True",None,None,None,None),
+	(1,7,"GtkAdjustment","upper","100.0",None,None,None,None),
+	(1,7,"GtkAdjustment","value","50.0",None,None,None,None)
+  </object_property>
+</cambalache-project>
