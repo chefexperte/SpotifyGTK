@@ -1,0 +1,15 @@
+.fadeout:hover {
+    opacity: 0;
+    transition: 0.25s;
+    min-width: 6em;
+}
+.fadein {
+    opacity: 1;
+    min-width: 0;
+    transition: 0.25s;
+}
+.fadein:hover {
+    opacity: 1;
+    transition: 0.25s;
+    min-width: 6em;
+}
