@@ -1,2 +1,3 @@
 .idea/
 webserver/token.txt
+webserver/client-auth.txt
