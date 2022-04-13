@@ -7,7 +7,7 @@ Or rather will work when it's done.
 SpotifyGTK, as I do plan at the moment will have three main components. 
 1. The UI, written in Gtk 4.0 and Libadwaita 1.0, which is what you will see as a user. Playing songs, browsing Spotify, and so on. 
 2. The webserver, using http.server and a CGIHTTPRequestHandler. It does handle HTML/CSS/JS/PHP (for now), 
-and is supposed to run a minimalistic web implementation of the Spotify Web API to play full songs, instead of the 30s previews.
+and is supposed to run a minimalistic web implementation of the Spotify Web Playback SDK to play full songs, instead of the 30s previews.
 3. An invisible instance of a browser, for now I have been trying to use Firefox, controlled by selenium. This will be the connection between
 the webserver and the UI. Spotify does not directly allow loading audio, because it wants to use DRM, so we must use a browser and one that 
 also supports Widevine CDM for DRM. 
