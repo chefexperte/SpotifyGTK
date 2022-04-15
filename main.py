@@ -19,10 +19,6 @@ def run_ui(ui: SpotifyGTK):
     ui.run_ui(callbacks)
 
 
-def callback_handler(callback: ()):
-    pass
-
-
 def toggle_play(d):
     controller.togglePlay(d)
 
@@ -36,9 +32,10 @@ callbacks = {"backend_ready": backend_ready, "toggle_play": toggle_play}
 if __name__ == "__main__":
     path = os.getcwd()
     os.environ["PATH"] += os.pathsep + path
+    mail = input("\nEmail: ")
     passw = input("\nPassword: ")
     server = Webserver()
-    controller = WebController("straightea@outlook.com", passw)
+    controller = WebController(mail, passw)
     window = SpotifyGTK()
     srv = Thread(target=run_server, args=[server])
     ctl = Thread(target=run_web_controller, args=[controller])
