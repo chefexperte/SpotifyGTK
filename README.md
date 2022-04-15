@@ -32,3 +32,7 @@ from the Spotify page and give the webapp a token, which enables you to start pl
 devices as well. 
 ## The UI
 Start main.py and it will launch the UI, which currently only has a player toolbar on the bottom without functionality, but it works. 
+**UPDATE:** I have now added a small working version. 
+When you start main.py, it will launch the server, the controller and the ui. 
+
+The server is for handling HTML, JS, PHP, loading the Spotify Web Playback SDK and playback. The controller will log you in, grant auth, and allow you to start your previous playing song over the play button in the ui. 
