@@ -1,3 +1,9 @@
 .idea/
 webserver/token.txt
 webserver/client-auth.txt
+firefox-profile/
+geckodriver
+geckodriver.log
+server/php.ini
+server/token.txt
+server/client-auth.txt

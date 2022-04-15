@@ -6,8 +6,18 @@ $token = $_POST['token'];
 $expire = $_POST['expiration'];
 $refresh = $_POST['refresh_token'];
 $file = fopen("../token.txt", 'w');
-$expire_secs = time() + (int) $expire;
-fwrite($file, $token . "\n" . $expire_secs . "\n" . $refresh);
+$seven_days = 60*60*24*7;
+$expire_secs = 0;
+if ($expire > $seven_days) {
+    $expire_secs = (int) $expire;
+} else {
+    $expire_secs = time() + (int) $expire;
+}
+
+echo "time(): " . time() . "\n";
+echo "\$expire: $expire\n";
+echo "\$expire_secs: $expire_secs\n";
+fwrite($file, $token . "\n" . $expire_secs . "\n" . $refresh . "\n");
 fclose($file);
 }else{
 $file = fopen("../no_data_given.txt", 'w');

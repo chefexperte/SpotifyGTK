@@ -3,6 +3,8 @@ import os
 from http.server import CGIHTTPRequestHandler, HTTPServer
 from os import getcwd
 
+# get path of file
+# local_path = os.path.dirname(os.path.abspath(__file__))
 # setting ip and port
 hostName = "localhost"
 serverPort = 8080
@@ -13,10 +15,8 @@ handler.cgi_directories.append('/cgi-files')
 
 
 class MyServer(handler):
-    # list with files that have to be executed as a cgi, and thus are placed in the cgi folder
-    cgi_list = []
-    for file in os.listdir("cgi-files"):
-        cgi_list.append(file)
+
+    cgi_list: [str] = None
 
     def get_post_data(self) -> dict[str, str]:
         """
@@ -39,7 +39,6 @@ class MyServer(handler):
             self.path = "/cgi-files" + self.path
         else:
             self.path = "/webapp" + self.path
-        # self.log_message(self.path)
         CGIHTTPRequestHandler.do_GET(self)
 
         # self.send_response(200)
@@ -52,7 +51,6 @@ class MyServer(handler):
     def do_POST(self):
         if self.clean_path() in self.cgi_list:
             self.path = "/cgi-files" + self.path
-            # self.log_message(self.path)
             CGIHTTPRequestHandler.do_POST(self)
         else:
             self.send_response(501, "Not allowed")
@@ -63,16 +61,39 @@ def prepare_php_ini():
     open("php.ini", "w").write("cgi.force_redirect = 0\ndoc_root = " + getcwd())
 
 
-if __name__ == "__main__":
-    prepare_php_ini()
-    webServer = HTTPServer((hostName, serverPort), MyServer)
-    # noinspection HttpUrlsUsage
-    print("Server started http://%s:%s" % (hostName, serverPort))
+def prepare_cgi_list():
+    # list with files that have to be executed as a cgi, and thus are placed in the cgi folder
+    MyServer.cgi_list = []
+    for file in os.listdir("cgi-files"):
+        MyServer.cgi_list.append(file)
+    print("CGI scripts: ")
+    [print(name) for name in MyServer.cgi_list]
 
+
+class Webserver:
+
+    def __init__(self):
+        file_path = os.path.dirname(os.path.abspath(__file__))
+        os.chdir(file_path)
+        prepare_php_ini()
+        prepare_cgi_list()
+        self.web_server = HTTPServer((hostName, serverPort), MyServer)
+        # noinspection HttpUrlsUsage
+        print("Server started http://%s:%s" % (hostName, serverPort))
+
+    def run(self):
+        self.web_server.serve_forever()
+
+    def stop(self):
+        self.web_server.server_close()
+
+
+if __name__ == "__main__":
+    webserver = Webserver()
     try:
-        webServer.serve_forever()
+        webserver.run()
     except KeyboardInterrupt:
         pass
 
-    webServer.server_close()
+    webserver.stop()
     print("Server stopped.")
