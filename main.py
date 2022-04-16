@@ -27,7 +27,11 @@ def backend_ready():
     window.backend_ready_callback()
 
 
-callbacks = {"backend_ready": backend_ready, "toggle_play": toggle_play}
+def report_state(position: int, duration: int):
+    window.report_state_callback(position, duration)
+
+
+callbacks = {"backend_ready": backend_ready, "toggle_play": toggle_play, "report_state": report_state}
 
 if __name__ == "__main__":
     path = os.getcwd()

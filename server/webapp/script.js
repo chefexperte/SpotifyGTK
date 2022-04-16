@@ -168,7 +168,7 @@ window.onSpotifyWebPlaybackSDKReady = () => {
             player.getCurrentState().then(state => {
                 if (!state) {
                     // User is not playing music through the Web Playback SDK
-
+                    // fetch if currently playing or not
                     fetch(`${apiEndpoint}/me/player`, {
                         method: 'GET',
                         headers: {
@@ -179,6 +179,7 @@ window.onSpotifyWebPlaybackSDKReady = () => {
                         let curr_id = data.device.id;
                         // noinspection JSUnresolvedVariable
                         let playing = data.is_playing;
+                        // if is playing, pause
                         if (playing) {
                             fetch(`${apiEndpoint}/me/player/pause`, {
                                 method: 'PUT',
@@ -187,6 +188,7 @@ window.onSpotifyWebPlaybackSDKReady = () => {
                                 }
                             });
                         } else {
+                            //if not playing, play
                             fetch(`${apiEndpoint}/me/player/play`, {
                                 method: 'PUT',
                                 headers: {
@@ -195,8 +197,6 @@ window.onSpotifyWebPlaybackSDKReady = () => {
                             });
                         }
                     });
-
-
                 } else {
                     player.togglePlay();
                 }
@@ -228,6 +228,21 @@ window.onSpotifyWebPlaybackSDKReady = () => {
                 }
             }).then();
         };
+        let timer;
+        let reportState = function () {
+            player.getCurrentState().then(state => {
+                if (!state) {
+                    // We're not playing music
+                    return;
+                }
+                document.getElementById("playbackPosition").innerText = state.position;
+                document.getElementById("trackDuration").innerText = state.duration;
+            });
+            timer = setTimeout(reportState, 1000);
+        };
+        reportState();
+
+
     });
 
     // Not Ready

@@ -1,4 +1,6 @@
 import sys
+from threading import Thread
+from time import sleep
 
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
@@ -10,6 +12,7 @@ from selenium.common.exceptions import NoSuchElementException, TimeoutException
 class WebController:
     driver: webdriver.Firefox = None
     callbacks: [()] = None
+    dead = False
 
     def stop(self):
         if self.driver:
@@ -40,6 +43,7 @@ class WebController:
         if not self.element_exists(By.ID, "login-username"):
             return False
         # type in user and pass
+        self.username, self.password = self.callbacks["get_login"]
         self.driver.find_element(by="id", value="login-username").send_keys(self.username)
         self.driver.find_element(by="id", value="login-password").send_keys(self.password)
         # check remember me button
@@ -114,6 +118,17 @@ class WebController:
                 self.driver.find_element(By.ID, "playHere").click()
                 # We have moved playback to the current device, now set player button clickable
                 self.callbacks["backend_ready"]()
+        loop = Thread(target=self.report_loop, args=[])
+        loop.start()
+
+    def report_loop(self):
+        sleep(1)
+        if not self.driver or self.dead:
+            return
+        position = int(self.driver.find_element(By.ID, "playbackPosition").text)
+        duration = int(self.driver.find_element(By.ID, "trackDuration").text)
+        self.callbacks["report_state"](position, duration)
+        self.report_loop()
 
     # noinspection PyUnusedLocal
     def togglePlay(self, d):

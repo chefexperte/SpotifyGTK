@@ -6,8 +6,10 @@ gi.require_version('Adw', '1')
 from gi.repository import Gtk, Adw
 
 
-class SpotifyGTK:
+class SpotifyGtkUI:
     play_button: Gtk.Button = None
+    position_slider: Gtk.Scale = None
+    loudness_slider: Gtk.Scale = None
     callbacks: [()] = None
 
     def __init__(self):
@@ -72,11 +74,11 @@ class SpotifyGTK:
         player_controls.append(self.play_button)
         player_controls.append(skip_button)
         player_box.append(player_controls)
-        scale = Gtk.Scale()
-        scale.set_range(0, 100)
-        scale.set_hexpand(True)
-        scale.set_value(80)
-        player_box.append(scale)
+        self.position_slider = Gtk.Scale()
+        self.position_slider.set_range(0, 100)
+        self.position_slider.set_hexpand(True)
+        self.position_slider.set_value(80)
+        player_box.append(self.position_slider)
         volume_button_box = Gtk.EventControllerMotion()
         volume_button = Gtk.Button(icon_name="audio-volume-high")
         context = volume_button.get_style_context()
@@ -89,19 +91,19 @@ class SpotifyGTK:
         volume_button.set_can_focus(False)
         fixed = Gtk.Fixed()
         fixed.set_valign(Gtk.Align.CENTER)
-        loudness_slider = Gtk.Scale()
-        loudness_slider.set_inverted(True)
-        loudness_slider.set_range(0, 100)
-        loudness_slider.set_hexpand(False)
-        loudness_slider.set_value(100)
+        self.loudness_slider = Gtk.Scale()
+        self.loudness_slider.set_inverted(True)
+        self.loudness_slider.set_range(0, 100)
+        self.loudness_slider.set_hexpand(False)
+        self.loudness_slider.set_value(100)
         # loudness_slider.set_property("opacity", 0.1)
-        loudness_slider.add_css_class("fadein")
-        volume_button_box.connect("enter", lambda a, b, c: fade_in(fixed, volume_button, loudness_slider))
-        volume_button_box.connect("leave", lambda a: fade_out(fixed, volume_button, loudness_slider))
+        self.loudness_slider.add_css_class("fadein")
+        volume_button_box.connect("enter", lambda a, b, c: fade_in(fixed, volume_button, self.loudness_slider))
+        volume_button_box.connect("leave", lambda a: fade_out(fixed, volume_button, self.loudness_slider))
         # fixed.put(loudness_slider, 0, 0)
         # fixed.put(volume_button, 0, 0)
         # player_box.append(fixed)
-        player_box.append(loudness_slider)
+        player_box.append(self.loudness_slider)
         main_box.append(headerbar)
         main_box.append(upper_box)
         main_box.append(player_box)
@@ -116,6 +118,10 @@ class SpotifyGTK:
 
     def backend_ready_callback(self):
         self.play_button.set_sensitive(True)
+
+    def report_state_callback(self, position: int, duration: int):
+        percent = (position / duration) * 100
+        self.position_slider.set_value(percent)
 
     def run_ui(self, callbacks):
         self.callbacks = callbacks
