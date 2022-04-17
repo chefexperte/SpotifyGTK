@@ -7,10 +7,17 @@
 <body>
 <h1>SpotifyGTK WebApp</h1>
 <script src="https://sdk.scdn.co/spotify-player.js"></script>
-<button id="togglePlay" disabled>Toggle Play</button><br>
+<button id="togglePlay" disabled>Toggle Play</button>
+<br>
 <button id="playHere" disabled>Play here</button>
-<label for="volume">Volume: </label><input id="volume"/><button id="setVolume" disabled>Set volume</button><br>
-Position: <label id="playbackPosition"></label><br>
+<label for="volume">Volume: </label><input id="volume"/>
+<button id="setVolume" disabled>Set volume</button>
+<br>
+Title: <label id="trackTitle"></label><br>
+Position now: <label id="position"></label><br>
+<label for="playbackPosition">Position want: </label><input id="playbackPosition"/>
+<button id="setPosition" disabled>Set position</button>
+<br>
 Duration: <label id="trackDuration"></label><br>
 <p id="initMessage"></p>
 <script src="auth_provider.php"></script>

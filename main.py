@@ -50,7 +50,16 @@ def report_state(position: int, duration: int):
     window.report_state_callback(position, duration)
 
 
-callbacks = {"backend_ready": backend_ready, "toggle_play": toggle_play, "report_state": report_state}
+def set_volume(volume: int):
+    controller.set_volume(volume)
+
+
+def set_position(position: int):
+    controller.set_position(position)
+
+
+callbacks = {"backend_ready": backend_ready, "toggle_play": toggle_play, "report_state": report_state,
+             "set_volume": set_volume, "set_position": set_position}
 
 if __name__ == "__main__":
     path = os.getcwd()

@@ -1,5 +1,8 @@
 import os
+
 import gi
+
+from thread_tools.delayed_thread import DelayedThread
 
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
@@ -11,6 +14,9 @@ class SpotifyGtkUI:
     position_slider: Gtk.Scale = None
     loudness_slider: Gtk.Scale = None
     callbacks: [()] = None
+    volume_change_delay: DelayedThread = None
+    position_change_delay: DelayedThread = None
+    track_duration: int = None
 
     def __init__(self):
         self.file_dir = os.path.dirname(os.path.abspath(__file__))
@@ -21,35 +27,11 @@ class SpotifyGtkUI:
     def on_activate(self, appl):
         global css_provider
         css_provider = Gtk.CssProvider()
-        data = b"""
-        .fish {
-            color: white;
-        }
-        fadeout:hover {
-            color: green;
-            background-color: green;
-        }
-        .fadeout:hover {
-            color: green;
-            background-color: green;
-        }
-        #fadeout:hover {
-            color: green;
-            background-color: green;
-        }
-        """
-        # css_provider.load_from_data(data)
         css_provider.load_from_path(self.file_dir + "/style.css")
         win = Adw.ApplicationWindow(application=appl)
         win.css_provider = css_provider
-        # context = win.get_style_context()
-        # context.add_provider(css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
         main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        # main_box.add_css_class("osd")
         headerbar = Gtk.HeaderBar()
-        # win.set_titlebar(headerbar)
-        # headerbar.add_css_class("osd")
-        # main_box.set_valign(Gtk.Align.CENTER)
         upper_box = Gtk.Box()
         upper_box.append(Gtk.Label(label="UPPER"))
         player_box = Gtk.Box()
@@ -62,7 +44,6 @@ class SpotifyGtkUI:
         player_box.set_margin_end(15)
         player_box.set_margin_top(15)
         player_box.set_size_request(500, 0)
-        # player_box.append(Gtk.Label(label="PLAYER"))
         player_controls = Gtk.Box()
         player_controls.add_css_class("linked")
         previous_button = Gtk.Button(icon_name="media-skip-backward-symbolic")
@@ -77,7 +58,8 @@ class SpotifyGtkUI:
         self.position_slider = Gtk.Scale()
         self.position_slider.set_range(0, 100)
         self.position_slider.set_hexpand(True)
-        self.position_slider.set_value(80)
+        self.position_slider.set_value(0)
+        self.position_slider.connect("change-value", lambda a, b, c: self.position_change())
         player_box.append(self.position_slider)
         volume_button_box = Gtk.EventControllerMotion()
         volume_button = Gtk.Button(icon_name="audio-volume-high")
@@ -85,7 +67,6 @@ class SpotifyGtkUI:
         context.add_provider(css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
         volume_button.add_controller(volume_button_box)
         volume_button.add_css_class("circular")
-        # volume_button.add_css_class("background")
         volume_button.add_css_class("fadeout")
         volume_button.set_vexpand(False)
         volume_button.set_can_focus(False)
@@ -96,8 +77,8 @@ class SpotifyGtkUI:
         self.loudness_slider.set_range(0, 100)
         self.loudness_slider.set_hexpand(False)
         self.loudness_slider.set_value(100)
-        # loudness_slider.set_property("opacity", 0.1)
         self.loudness_slider.add_css_class("fadein")
+        self.loudness_slider.connect("value-changed", lambda a: self.volume_change())
         volume_button_box.connect("enter", lambda a, b, c: fade_in(fixed, volume_button, self.loudness_slider))
         volume_button_box.connect("leave", lambda a: fade_out(fixed, volume_button, self.loudness_slider))
         # fixed.put(loudness_slider, 0, 0)
@@ -120,8 +101,27 @@ class SpotifyGtkUI:
         self.play_button.set_sensitive(True)
 
     def report_state_callback(self, position: int, duration: int):
+        self.track_duration = duration
         percent = (position / duration) * 100
-        self.position_slider.set_value(percent)
+        if not self.position_change_delay or not self.position_change_delay.is_running():
+            self.position_slider.set_value(percent)
+
+    def position_change(self):
+        if self.position_change_delay is not None and self.position_change_delay.is_running():
+            # self.volume_change_delay.reset_timer()
+            self.position_change_delay.args = [self.position_slider.get_value() / 100 * self.track_duration]
+        else:
+            self.position_change_delay = \
+                DelayedThread(self.callbacks["set_position"],
+                              [self.position_slider.get_value() / 100 * self.track_duration], 300)
+
+    def volume_change(self):
+        if self.volume_change_delay is not None and self.volume_change_delay.is_running():
+            # self.volume_change_delay.reset_timer()
+            self.volume_change_delay.args = [self.loudness_slider.get_value()]
+        else:
+            self.volume_change_delay = \
+                DelayedThread(self.callbacks["set_volume"], [self.loudness_slider.get_value()], 200)
 
     def run_ui(self, callbacks):
         self.callbacks = callbacks

@@ -3,6 +3,7 @@ from threading import Thread
 from time import sleep
 
 from selenium import webdriver
+from selenium.webdriver import Keys
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
@@ -125,8 +126,13 @@ class WebController:
         sleep(1)
         if not self.driver or self.dead:
             return
-        position = int(self.driver.find_element(By.ID, "playbackPosition").text)
-        duration = int(self.driver.find_element(By.ID, "trackDuration").text)
+        pos = self.driver.find_element(By.ID, "position").text
+        if pos is None or pos == "":
+            position = 0
+            duration = 1
+        else:
+            position = int(pos)
+            duration = int(self.driver.find_element(By.ID, "trackDuration").text)
         self.callbacks["report_state"](position, duration)
         self.report_loop()
 
@@ -134,6 +140,18 @@ class WebController:
     def togglePlay(self, d):
         if self.element_exists(By.ID, "togglePlay"):
             self.driver.find_element(By.ID, "togglePlay").click()
+
+    def set_volume(self, volume: int):
+        if self.element_exists(By.ID, "volume"):
+            self.driver.find_element(By.ID, "volume").clear()
+            self.driver.find_element(By.ID, "volume").send_keys(int(volume))
+            self.driver.find_element(By.ID, "setVolume").click()
+
+    def set_position(self, position: int):
+        if self.element_exists(By.ID, "playbackPosition"):
+            self.driver.find_element(By.ID, "playbackPosition").clear()
+            self.driver.find_element(By.ID, "playbackPosition").send_keys(int(position))
+            self.driver.find_element(By.ID, "setPosition").click()
 
 
 if __name__ == "__main__":

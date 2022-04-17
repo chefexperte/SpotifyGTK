@@ -70,12 +70,14 @@ function setReady(ready) {
         window.document.getElementById("setVolume").disabled = true;
         window.document.getElementById("playHere").disabled = true;
         window.document.getElementById("togglePlay").disabled = true;
+        window.document.getElementById("setPosition").disabled = true;
     } else if (!isReady && ready) {
         //state change from not ready to ready
         isReady = true;
         window.document.getElementById("setVolume").disabled = false;
         window.document.getElementById("playHere").disabled = false;
         window.document.getElementById("togglePlay").disabled = false;
+        window.document.getElementById("setPosition").disabled = false;
     }
 }
 
@@ -215,18 +217,37 @@ window.onSpotifyWebPlaybackSDKReady = () => {
                 setReady(true);
             });
         };
-
+        // setting playback volume
         document.getElementById('setVolume').onclick = function () {
             let volume = document.getElementById("volume").value; // get volume
             volume = Math.max(Math.min(100, volume), 0); // limit to value between 0 and 100
             // var json_data = JSON.stringify({volume_percent: volume});
-            fetch(`${apiEndpoint}/me/player/volume?volume_percent=${volume}`, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${_token}`,
-                    'Content-Type': 'application/json'
+            player.getCurrentState().then(state => {
+                if (!state) {
+                    fetch(`${apiEndpoint}/me/player/volume?volume_percent=${volume}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${_token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    }).then();
+                } else {
+                    player.setVolume(volume / 100)
                 }
-            }).then();
+            });
+        };
+        // setting playback position
+        document.getElementById('setPosition').onclick = function () {
+            let position = document.getElementById("playbackPosition").value; // get volume
+            player.getCurrentState().then(state => {
+                if (!state) {
+                    //TODO
+                } else {
+                    player.seek(position);
+                    document.getElementById("position").innerText = position
+                }
+            });
+
         };
         let timer;
         let reportState = function () {
@@ -235,7 +256,7 @@ window.onSpotifyWebPlaybackSDKReady = () => {
                     // We're not playing music
                     return;
                 }
-                document.getElementById("playbackPosition").innerText = state.position;
+                document.getElementById("position").innerText = state.position;
                 document.getElementById("trackDuration").innerText = state.duration;
             });
             timer = setTimeout(reportState, 1000);
