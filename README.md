@@ -2,6 +2,8 @@
 
 Currently there is not much to see yet, but this is supposed to be a Spotify player with a modern GTK/Libadwaita interface. 
 
+https://user-images.githubusercontent.com/12102112/163695312-6972c397-a646-4398-ba02-9986050ce15a.mp4
+
 # How does it work?
 Or rather will work when it's done. 
 SpotifyGTK, as I do plan at the moment will have three main components. 
@@ -11,6 +13,7 @@ and is supposed to run a minimalistic web implementation of the Spotify Web Play
 3. An invisible instance of a browser, for now I have been trying to use Firefox, controlled by selenium. This will be the connection between
 the webserver and the UI. Spotify does not directly allow loading audio, because it wants to use DRM, so we must use a browser and one that 
 also supports Widevine CDM for DRM. 
+
 
 # Requirements
 To use most of the features you need a Spotify Premium account. 
