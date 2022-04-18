@@ -2,6 +2,7 @@ import os
 
 import gi
 
+from playback_info import PlaybackInfo
 from thread_tools.delayed_thread import DelayedThread
 
 gi.require_version('Gtk', '4.0')
@@ -13,6 +14,7 @@ class SpotifyGtkUI:
     play_button: Gtk.Button = None
     position_slider: Gtk.Scale = None
     loudness_slider: Gtk.Scale = None
+    track_title: Gtk.Label = None
     callbacks: [()] = None
     volume_change_delay: DelayedThread = None
     position_change_delay: DelayedThread = None
@@ -33,7 +35,8 @@ class SpotifyGtkUI:
         main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         headerbar = Gtk.HeaderBar()
         upper_box = Gtk.Box()
-        upper_box.append(Gtk.Label(label="UPPER"))
+        self.track_title = Gtk.Label(label="UPPER");
+        upper_box.append(self.track_title)
         player_box = Gtk.Box()
         player_box.add_css_class("toolbar")
         player_box.add_css_class("osd")
@@ -100,15 +103,19 @@ class SpotifyGtkUI:
     def backend_ready_callback(self):
         self.play_button.set_sensitive(True)
 
-    def report_state_callback(self, position: int, duration: int):
-        self.track_duration = duration
-        percent = (position / duration) * 100
+    def report_state_callback(self, info: PlaybackInfo):
+        self.track_duration = info.duration
+        percent = (info.position / info.duration) * 100
         if not self.position_change_delay or not self.position_change_delay.is_running():
             self.position_slider.set_value(percent)
+        self.track_title.set_text(info.title)
+        if info.playing:
+            self.play_button.set_icon_name("media-playback-pause-symbolic")
+        else:
+            self.play_button.set_icon_name("media-playback-start-symbolic")
 
     def position_change(self):
         if self.position_change_delay is not None and self.position_change_delay.is_running():
-            # self.volume_change_delay.reset_timer()
             self.position_change_delay.args = [self.position_slider.get_value() / 100 * self.track_duration]
         else:
             self.position_change_delay = \
@@ -117,7 +124,6 @@ class SpotifyGtkUI:
 
     def volume_change(self):
         if self.volume_change_delay is not None and self.volume_change_delay.is_running():
-            # self.volume_change_delay.reset_timer()
             self.volume_change_delay.args = [self.loudness_slider.get_value()]
         else:
             self.volume_change_delay = \

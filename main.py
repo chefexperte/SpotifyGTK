@@ -2,6 +2,7 @@ import os
 from threading import Thread
 from time import sleep
 
+from playback_info import PlaybackInfo
 from web_controller import WebController
 from main_ui import SpotifyGtkUI
 from server.webserver import Webserver
@@ -46,8 +47,8 @@ def backend_ready():
     window.backend_ready_callback()
 
 
-def report_state(position: int, duration: int):
-    window.report_state_callback(position, duration)
+def report_state(info: PlaybackInfo):
+    window.report_state_callback(info)
 
 
 def set_volume(volume: int):

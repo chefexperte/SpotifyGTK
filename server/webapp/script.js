@@ -63,6 +63,8 @@ const scopes = [
     'user-modify-playback-state'
 ];
 
+let extPlayerData = null;
+
 function setReady(ready) {
     if (isReady && !ready) {
         //state change from ready to not ready
@@ -104,7 +106,7 @@ if (_error) {
     msg.parentNode.insertBefore(try_again, msg.nextSibling);
     console.log("Error received.");
 } else if (request_refresh) {
-    // noinspection JSUnresolvedVariable
+    // noinspection JSUnresolvedVariable,JSDeprecatedSymbols
     let b64 = btoa(`${clientId}:${clientSecret}`);
     fetch(`${authEndpoint}/api/token`, {
         method: 'POST',
@@ -116,7 +118,7 @@ if (_error) {
             'Authorization': `Basic ${b64}`
         }
     }).then(res => res.json()).then(data => {
-        // noinspection JSUnresolvedVariable
+        // noinspection JSUnresolvedVariable,JSUndeclaredVariable
         _token = data.access_token;
         // noinspection JSUnresolvedVariable
         let expire = 3600;
@@ -125,8 +127,8 @@ if (_error) {
     });
 } else if (_code) {
     // We have no error, but a code. So request a token now.
-    // noinspection JSUnresolvedVariable
-    var b64 = btoa(`${clientId}:${clientSecret}`);
+    // noinspection JSUnresolvedVariable,JSDeprecatedSymbols
+    let b64 = btoa(`${clientId}:${clientSecret}`);
     fetch(`${authEndpoint}/api/token`, {
         method: 'POST',
         body: new URLSearchParams({
@@ -138,10 +140,11 @@ if (_error) {
             'Authorization': `Basic ${b64}`
         }
     }).then(res => res.json()).then(data => {
-        // noinspection JSUnresolvedVariable
+        // noinspection JSUnresolvedVariable,JSUndeclaredVariable
         _token = data.access_token;
-        // noinspection JSUnresolvedVariable
+        // noinspection JSUnresolvedVariable,JSUndeclaredVariable
         _expire = data.expires_in;
+        // noinspection JSUndeclaredVariable
         _refresh = data.refresh_token;
         saveToken(_token, _expire, _refresh);
         console.log("Token saved.");
@@ -154,7 +157,123 @@ if (_error) {
     window.location = `${authEndpoint}/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scopes.join('%20')}&response_type=code&show_dialog=false`;
 }
 
+function getExternalPlayerData() {
+    return fetch(`${apiEndpoint}/me/player`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${_token}`
+        }
+    }).then(res => {
+        if (res.status === 204) return;
+        res.json().then(data => {
+            return data;
+        })
+    });
+}
+
+function togglePlay(player) {
+    player.getCurrentState().then(state => {
+        if (!state) {
+            // User is not playing music through the Web Playback SDK
+            // fetch if currently playing or not
+            if (extPlayerData == null) return;
+            // noinspection JSUnresolvedVariable
+            let playing = extPlayerData.is_playing;
+            // if player is playing, pause
+            if (playing) {
+                fetch(`${apiEndpoint}/me/player/pause`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${_token}`
+                    }
+                }).then();
+            } else {
+                //if not playing, play
+                fetch(`${apiEndpoint}/me/player/play`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${_token}`
+                    }
+                }).then();
+            }
+        } else {
+            player.togglePlay();
+        }
+    });
+}
+
+function playHere(device_id) {
+    setReady(false)
+    let json_data = JSON.stringify({device_ids: [device_id]});
+    fetch(`${apiEndpoint}/me/player`, {
+        method: 'PUT',
+        body: json_data,
+        headers: {
+            'Authorization': `Bearer ${_token}`
+        }
+    }).then(() => {
+        setReady(true);
+    });
+}
+
+function setVolume(player) {
+    let volume = document.getElementById("volume").value; // get volume
+    volume = Math.max(Math.min(100, volume), 0); // limit to value between 0 and 100
+    // var json_data = JSON.stringify({volume_percent: volume});
+    player.getCurrentState().then(state => {
+        if (!state) {
+            // noinspection JSUnresolvedVariable
+            if (extPlayerData == null || extPlayerData.device == null) return;
+            let device_id = extPlayerData.device.id;
+            fetch(`${apiEndpoint}/me/player/volume?volume_percent=${volume}&device_id=${device_id}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${_token}`,
+                    'Content-Type': 'application/json'
+                }
+            }).then();
+        } else {
+            player.setVolume(volume / 100)
+        }
+    });
+}
+
+function setPosition(player) {
+    let position = document.getElementById("playbackPosition").value; // get volume
+    player.getCurrentState().then(state => {
+        if (!state) {
+            document.getElementById("position").innerText = position
+            // noinspection JSUnresolvedVariable
+            //if (extPlayerData == null || extPlayerData.device == null) return;
+            //let device_id = extPlayerData.device.id;
+            fetch(`${apiEndpoint}/me/player/seek?position_ms=${position}`, {//&device_id=${device_id}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${_token}`,
+                    'Content-Type': 'application/json'
+                }
+            }).then();
+        } else {
+            player.seek(position);
+            document.getElementById("position").innerText = position
+        }
+    });
+}
+
+function setMediaInformation(title, artist) {
+    if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+            title: title,
+            artist: artist,
+            //album: 'Whenever You Need Somebody'
+        });
+    }
+    navigator.mediaSession.playbackState = "playing"
+    //TODO
+}
+
 window.onSpotifyWebPlaybackSDKReady = () => {
+    // noinspection JSUnusedGlobalSymbols
     const player = new Spotify.Player({
         name: 'SpotifyGTK',
         getOAuthToken: cb => {
@@ -167,101 +286,61 @@ window.onSpotifyWebPlaybackSDKReady = () => {
         console.log('Ready with Device ID', device_id);
         setReady(true);
         document.getElementById('togglePlay').onclick = function () {
-            player.getCurrentState().then(state => {
-                if (!state) {
-                    // User is not playing music through the Web Playback SDK
-                    // fetch if currently playing or not
-                    fetch(`${apiEndpoint}/me/player`, {
-                        method: 'GET',
-                        headers: {
-                            'Authorization': `Bearer ${_token}`
-                        }
-                    }).then(res => res.json()).then(data => {
-                        // noinspection JSUnresolvedVariable
-                        let curr_id = data.device.id;
-                        // noinspection JSUnresolvedVariable
-                        let playing = data.is_playing;
-                        // if is playing, pause
-                        if (playing) {
-                            fetch(`${apiEndpoint}/me/player/pause`, {
-                                method: 'PUT',
-                                headers: {
-                                    'Authorization': `Bearer ${_token}`
-                                }
-                            });
-                        } else {
-                            //if not playing, play
-                            fetch(`${apiEndpoint}/me/player/play`, {
-                                method: 'PUT',
-                                headers: {
-                                    'Authorization': `Bearer ${_token}`
-                                }
-                            });
-                        }
-                    });
-                } else {
-                    player.togglePlay();
-                }
-            });
+            togglePlay(player);
         };
         document.getElementById('playHere').onclick = function () {
-            setReady(false)
-            let json_data = JSON.stringify({device_ids: [device_id]});
-            fetch(`${apiEndpoint}/me/player`, {
-                method: 'PUT',
-                body: json_data,
-                headers: {
-                    'Authorization': `Bearer ${_token}`
-                }
-            }).then(() => {
-                setReady(true);
-            });
+            playHere(device_id);
         };
         // setting playback volume
         document.getElementById('setVolume').onclick = function () {
-            let volume = document.getElementById("volume").value; // get volume
-            volume = Math.max(Math.min(100, volume), 0); // limit to value between 0 and 100
-            // var json_data = JSON.stringify({volume_percent: volume});
-            player.getCurrentState().then(state => {
-                if (!state) {
-                    fetch(`${apiEndpoint}/me/player/volume?volume_percent=${volume}`, {
-                        method: 'PUT',
-                        headers: {
-                            'Authorization': `Bearer ${_token}`,
-                            'Content-Type': 'application/json'
-                        }
-                    }).then();
-                } else {
-                    player.setVolume(volume / 100)
-                }
-            });
+            setVolume(player)
         };
         // setting playback position
         document.getElementById('setPosition').onclick = function () {
-            let position = document.getElementById("playbackPosition").value; // get volume
-            player.getCurrentState().then(state => {
-                if (!state) {
-                    //TODO
-                } else {
-                    player.seek(position);
-                    document.getElementById("position").innerText = position
-                }
-            });
-
+            setPosition(player)
         };
+        // report state loop will put information on the page every second
         let timer;
-        let reportState = function () {
-            player.getCurrentState().then(state => {
+        let name, position, duration, isPlaying;
+        let reportState = async function () {
+            let next_report = 1000;
+            await player.getCurrentState().then(async state => {
                 if (!state) {
-                    // We're not playing music
-                    return;
+                    // We're not playing music in the webplayer
+                    await getExternalPlayerData().then(data => {
+                        extPlayerData = data
+                    });
+                    if (extPlayerData == null) return;
+                    if (extPlayerData.item != null) {
+                        name = extPlayerData.item.name;
+                        // noinspection JSUnresolvedVariable
+                        duration = extPlayerData.item.duration_ms;
+                    }
+                    // noinspection JSUnresolvedVariable
+                    position = extPlayerData.progress_ms;
+                    // noinspection JSUnresolvedVariable
+                    isPlaying = extPlayerData.is_playing;
+                    next_report = 1000;
+                } else {
+                    isPlaying = !state.paused;
+                    // noinspection JSUnresolvedVariable
+                    name = state.track_window.current_track.name
+                    position = state.position;
+                    duration = state.duration;
+                    next_report = 800;
                 }
-                document.getElementById("position").innerText = state.position;
-                document.getElementById("trackDuration").innerText = state.duration;
             });
-            timer = setTimeout(reportState, 1000);
+            document.title = name;
+            document.getElementById("trackTitle").innerText = name;
+            document.getElementById("position").innerText = position;
+            document.getElementById("trackDuration").innerText = duration;
+            document.getElementById("isPlaying").innerText = isPlaying;
+
+            setMediaInformation(name, "TODO");
+
+            timer = setTimeout(reportState, next_report);
         };
-        reportState();
+        reportState().then();
 
 
     });

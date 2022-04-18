@@ -3,11 +3,12 @@ from threading import Thread
 from time import sleep
 
 from selenium import webdriver
-from selenium.webdriver import Keys
-from selenium.webdriver.firefox.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.wait import WebDriverWait
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
+from selenium.webdriver.common.by import By
+from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.support.wait import WebDriverWait
+
+from playback_info import PlaybackInfo
 
 
 class WebController:
@@ -113,7 +114,7 @@ class WebController:
                 ready = False
         if ready:
             if self.element_exists(By.ID, "playHere"):
-                for i in range(0, 10):
+                for i in range(0, 20):
                     if not self.driver.find_element(By.ID, "playHere").is_enabled():
                         self.driver_wait(0.5)
                 self.driver.find_element(By.ID, "playHere").click()
@@ -126,14 +127,19 @@ class WebController:
         sleep(1)
         if not self.driver or self.dead:
             return
-        pos = self.driver.find_element(By.ID, "position").text
-        if pos is None or pos == "":
-            position = 0
-            duration = 1
-        else:
-            position = int(pos)
-            duration = int(self.driver.find_element(By.ID, "trackDuration").text)
-        self.callbacks["report_state"](position, duration)
+        if self.element_exists(By.ID, "position"):
+            pos = self.driver.find_element(By.ID, "position").text
+            if pos is None or pos == "":
+                title = ""
+                position = 0
+                duration = 1
+            else:
+                title = self.driver.find_element(By.ID, "trackTitle").text
+                position = int(pos)
+                duration = int(self.driver.find_element(By.ID, "trackDuration").text)
+            info = PlaybackInfo(title, position, duration)
+            info.playing = self.driver.find_element(By.ID, "isPlaying").text == "true"
+            self.callbacks["report_state"](info)
         self.report_loop()
 
     # noinspection PyUnusedLocal
