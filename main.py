@@ -1,92 +1,127 @@
+import logging
 import os
+import sys
+from os.path import exists
 from threading import Thread
 from time import sleep
 
+import auth_controller
 from playback_info import PlaybackInfo
 from web_controller import WebController
 from main_ui import SpotifyGtkUI
 from server.webserver import Webserver
 
 
-def run_server(serv: Webserver):
-    """
-    This method starts the webserver, should be run in a thread
-    :param serv: A initialized Webserver
-    """
-    serv.run()
+class SpotifyGTK:
+	server: Webserver = None
+	controller: WebController = None
+	window: SpotifyGtkUI = None
+	callbacks: dict[str, ()] = None
 
+	def __init__(self):
+		self.log_level = logging.DEBUG
+		log_format = logging.Formatter('[%(asctime)s] [%(levelname)s] - %(message)s')
+		self.log = logging.getLogger(__name__)
+		self.log.setLevel(self.log_level)
+		# writing to stdout
+		handler = logging.StreamHandler(sys.stdout)
+		handler.setLevel(self.log_level)
+		handler.setFormatter(log_format)
+		self.log.addHandler(handler)
 
-def run_web_controller(ctrl: WebController):
-    """
-    This method starts the selenium web controller with the callbacks variable
-    :param ctrl: A initialized WebController
-    """
-    ctrl.run_controller(callbacks)
+		self.log.log(logging.INFO, "Starting SpotifyGTK")
+		self.callbacks = {"backend_ready": lambda: self.backend_ready(), "toggle_play": lambda d: self.toggle_play(d),
+		                  "report_state": lambda info: self.report_state(info), "set_volume": lambda volume:
+		                  self.set_volume(volume), "set_position": lambda pos: self.set_position(pos)}
 
+	def run_server(self):
+		"""
+		This method starts the webserver, should be run in a thread
+		:param serv: A initialized Webserver
+		"""
+		self.server.run()
 
-def run_ui(ui: SpotifyGtkUI):
-    """
-    This method runs the GTK/Libadwaita UI with the callbacks variable
-    :param ui: A initialized SpotifyGtkUI
-    """
-    ui.run_ui(callbacks)
+	def run_web_controller(self):
+		"""
+		This method starts the selenium web controller with the callbacks variable
+		:param ctrl: A initialized WebController
+		"""
+		self.controller.run_controller(self.callbacks)
 
+	def run_ui(self):
+		"""
+		This method runs the GTK/Libadwaita UI with the callbacks variable
+		:param ui: A initialized SpotifyGtkUI
+		"""
+		self.window.run_ui(self.callbacks)
 
-def toggle_play(d):
-    """
-    This callback is called from the ui, and tells the controller to press play
-    :param d: is given by the button connect event
-    """
-    controller.togglePlay(d)
+	def toggle_play(self, d):
+		"""
+		This callback is called from the ui, and tells the controller to press play
+		:param d: is given by the button connect event
+		"""
+		self.controller.togglePlay(d)
 
+	def backend_ready(self):
+		"""
+		Is called from the controller, when the webpage finished loading and is ready to play music
+		"""
+		self.window.backend_ready_callback()
 
-def backend_ready():
-    """
-    Is called from the controller, when the webpage finished loading and is ready to play music
-    """
-    window.backend_ready_callback()
+	def report_state(self, info: PlaybackInfo):
+		self.window.report_state_callback(info)
 
+	def set_volume(self, volume: int):
+		self.controller.set_volume(volume)
 
-def report_state(info: PlaybackInfo):
-    window.report_state_callback(info)
+	def set_position(self, position: int):
+		self.controller.set_position(position)
 
+	def run(self):
+		path = os.getcwd()
+		os.environ["PATH"] += os.pathsep + path
+		# mail = input("\nEmail: ")
+		# passw = input("\nPassword: ")
+		# if not os.path.exists("server/token.txt"):
+		#     # need to authenticate
+		#     auth_browser = AuthController()
+		#     auth_browser
+		if not exists("server/token.txt"):
+			auth = Thread(target=auth_controller.run_auth, args=[])
+			auth.start()
+			while auth.is_alive():
+				sleep(0.5)
+		print("Auth done.")
+		os.chdir(path)
+		if not exists("server/token.txt"):
+			print("Token not found, can't continue.")
+			return 1
+		self.server = Webserver()
+		self.controller = WebController()
+		self.window = SpotifyGtkUI()
+		srv = Thread(target=self.run_server, args=[])
+		ctl = Thread(target=self.run_web_controller, args=[])
+		uiw = Thread(target=self.run_ui, args=[])
 
-def set_volume(volume: int):
-    controller.set_volume(volume)
+		srv.start()
+		ctl.start()
+		uiw.start()
 
+		while True:
+			sleep(0.5)
+			if not uiw.is_alive():
+				if self.controller is not None:
+					self.controller.dead = True
+					self.controller.stop()
+					del self.controller
+				if self.server is not None:
+					self.server.web_server.shutdown()
+					self.server.stop()
+					del self.server
+				break
+		return 0
 
-def set_position(position: int):
-    controller.set_position(position)
-
-
-callbacks = {"backend_ready": backend_ready, "toggle_play": toggle_play, "report_state": report_state,
-             "set_volume": set_volume, "set_position": set_position}
 
 if __name__ == "__main__":
-    path = os.getcwd()
-    os.environ["PATH"] += os.pathsep + path
-    mail = input("\nEmail: ")
-    passw = input("\nPassword: ")
-    server = Webserver()
-    controller = WebController(mail, passw)
-    window = SpotifyGtkUI()
-    srv = Thread(target=run_server, args=[server])
-    ctl = Thread(target=run_web_controller, args=[controller])
-    uiw = Thread(target=run_ui, args=[window])
-
-    srv.start()
-    ctl.start()
-    uiw.start()
-
-    while True:
-        sleep(0.5)
-        if not uiw.is_alive():
-            if controller is not None:
-                controller.dead = True
-                controller.stop()
-                del controller
-            if server is not None:
-                server.web_server.shutdown()
-                server.stop()
-                del server
-            break
+	app = SpotifyGTK()
+	app.run()

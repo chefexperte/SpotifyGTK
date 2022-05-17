@@ -13,3 +13,6 @@
     transition: 0.25s;
     min-width: 6em;
 }
+.player-control-button {
+    min-width: 2em;
+}

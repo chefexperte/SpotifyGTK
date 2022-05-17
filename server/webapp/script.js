@@ -49,7 +49,7 @@ if (typeof request_refresh === 'undefined') {
 
 let isReady = false;
 
-const authEndpoint = 'https://accounts.spotify.com';
+//const authEndpoint = 'https://accounts.spotify.com';
 const apiEndpoint = 'https://api.spotify.com/v1';
 
 
@@ -83,17 +83,6 @@ function setReady(ready) {
     }
 }
 
-function saveToken(token, expiration, refresh_token) {
-    if (!token || !expiration || !refresh_token) return;
-    let data = new FormData();
-    data.append("token", token);
-    data.append("expiration", expiration);
-    data.append("refresh_token", refresh_token);
-    let xhr = new XMLHttpRequest();
-    xhr.open('post', 'save_backend.php', true);
-    xhr.send(data);
-}
-
 if (_error) {
     msg = window.document.getElementById("initMessage");
     msg.style.color = "red";
@@ -105,56 +94,11 @@ if (_error) {
     }
     msg.parentNode.insertBefore(try_again, msg.nextSibling);
     console.log("Error received.");
-} else if (request_refresh) {
-    // noinspection JSUnresolvedVariable,JSDeprecatedSymbols
-    let b64 = btoa(`${clientId}:${clientSecret}`);
-    fetch(`${authEndpoint}/api/token`, {
-        method: 'POST',
-        body: new URLSearchParams({
-            'grant_type': 'refresh_token',
-            'refresh_token': _refresh
-        }),
-        headers: {
-            'Authorization': `Basic ${b64}`
-        }
-    }).then(res => res.json()).then(data => {
-        // noinspection JSUnresolvedVariable,JSUndeclaredVariable
-        _token = data.access_token;
-        // noinspection JSUnresolvedVariable
-        let expire = 3600;
-        saveToken(_token, expire, _refresh);
-        console.log("Token saved.");
-    });
-} else if (_code) {
-    // We have no error, but a code. So request a token now.
-    // noinspection JSUnresolvedVariable,JSDeprecatedSymbols
-    let b64 = btoa(`${clientId}:${clientSecret}`);
-    fetch(`${authEndpoint}/api/token`, {
-        method: 'POST',
-        body: new URLSearchParams({
-            'grant_type': 'authorization_code',
-            'code': _code,
-            'redirect_uri': redirectUri
-        }),
-        headers: {
-            'Authorization': `Basic ${b64}`
-        }
-    }).then(res => res.json()).then(data => {
-        // noinspection JSUnresolvedVariable,JSUndeclaredVariable
-        _token = data.access_token;
-        // noinspection JSUnresolvedVariable,JSUndeclaredVariable
-        _expire = data.expires_in;
-        // noinspection JSUndeclaredVariable
-        _refresh = data.refresh_token;
-        saveToken(_token, _expire, _refresh);
-        console.log("Token saved.");
-    });
-    history.replaceState(null, "", location.href.split("?")[0]);
 } else if (_token) {
-    //everything is ready
+    // everything is ready
 } else {
-    // noinspection JSUnresolvedVariable
-    window.location = `${authEndpoint}/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scopes.join('%20')}&response_type=code&show_dialog=false`;
+    // go to the login script
+    window.location = `get_auth.html`;
 }
 
 function getExternalPlayerData() {
@@ -165,7 +109,8 @@ function getExternalPlayerData() {
         }
     }).then(res => {
         if (res.status === 204) return;
-        res.json().then(data => {
+        return res.json().then(data => {
+            // console.log(data)
             return data;
         })
     });

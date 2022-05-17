@@ -1,3 +1,4 @@
+import os
 import sys
 from threading import Thread
 from time import sleep
@@ -19,10 +20,6 @@ class WebController:
     def stop(self):
         if self.driver:
             self.driver.quit()
-
-    def __init__(self, user: str, passw: str):
-        self.username = user
-        self.password = passw
 
     def element_exists(self, by: By, value: str) -> bool:
         try:
@@ -107,7 +104,7 @@ class WebController:
         self.driver_wait(2)
         ready = True
         if self.driver.current_url.count("spotify.com") > 0:
-            if self.perform_auth():
+            if True: #self.perform_auth():
                 print("Auth and login success.")
             else:
                 print("There has been a problem with login or auth.")
@@ -124,23 +121,24 @@ class WebController:
         loop.start()
 
     def report_loop(self):
-        sleep(1)
-        if not self.driver or self.dead:
-            return
-        if self.element_exists(By.ID, "position"):
-            pos = self.driver.find_element(By.ID, "position").text
-            if pos is None or pos == "":
-                title = ""
-                position = 0
-                duration = 1
-            else:
-                title = self.driver.find_element(By.ID, "trackTitle").text
-                position = int(pos)
-                duration = int(self.driver.find_element(By.ID, "trackDuration").text)
-            info = PlaybackInfo(title, position, duration)
-            info.playing = self.driver.find_element(By.ID, "isPlaying").text == "true"
-            self.callbacks["report_state"](info)
-        self.report_loop()
+        while True:
+            sleep(1)
+            if not self.driver or self.dead:
+                return
+            if self.element_exists(By.ID, "position"):
+                pos = self.driver.find_element(By.ID, "position").text
+                if pos is None or pos == "" or pos == "undefined":
+                    title = ""
+                    position = 0
+                    duration = 1
+                else:
+                    title = self.driver.find_element(By.ID, "trackTitle").text
+                    position = int(pos)
+                    duration = int(self.driver.find_element(By.ID, "trackDuration").text)
+                info = PlaybackInfo(title, position, duration)
+                info.playing = self.driver.find_element(By.ID, "isPlaying").text == "true"
+                self.callbacks["report_state"](info)
+        # self.report_loop()
 
     # noinspection PyUnusedLocal
     def togglePlay(self, d):

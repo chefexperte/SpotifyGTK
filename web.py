@@ -90,8 +90,8 @@ if __name__ == "__main__":
         # start playback
 
         # audio controls
-        bus = SessionBus()
-        bus.get('.MediaPlayer2')
+        # bus = SessionBus()
+        # bus.get('.MediaPlayer2')
 
     thr = Thread(target=auto_close, args=[driver, 15])
     thr.run()

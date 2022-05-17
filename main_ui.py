@@ -19,6 +19,7 @@ class SpotifyGtkUI:
     volume_change_delay: DelayedThread = None
     position_change_delay: DelayedThread = None
     track_duration: int = None
+    is_playing = False
 
     def __init__(self):
         self.file_dir = os.path.dirname(os.path.abspath(__file__))
@@ -35,7 +36,14 @@ class SpotifyGtkUI:
         main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         headerbar = Gtk.HeaderBar()
         upper_box = Gtk.Box()
-        self.track_title = Gtk.Label(label="UPPER");
+        upper_box.add_css_class("toolbar")
+        upper_box.add_css_class("osd")
+
+        upper_box.set_margin_bottom(15)
+        upper_box.set_margin_start(15)
+        upper_box.set_margin_end(15)
+        upper_box.set_margin_top(15)
+        self.track_title = Gtk.Label(label="UPPER")
         upper_box.append(self.track_title)
         player_box = Gtk.Box()
         player_box.add_css_class("toolbar")
@@ -51,9 +59,12 @@ class SpotifyGtkUI:
         player_controls.add_css_class("linked")
         previous_button = Gtk.Button(icon_name="media-skip-backward-symbolic")
         self.play_button = Gtk.Button(icon_name="media-playback-pause-symbolic")
-        self.play_button.connect("clicked", self.callbacks["toggle_play"])
+        self.play_button.connect("clicked", self.toggle_play)
         self.play_button.set_sensitive(False)
         skip_button = Gtk.Button(icon_name="media-skip-forward-symbolic")
+        self.play_button.add_css_class("circular")
+        previous_button.add_css_class("circular")
+        skip_button.add_css_class("circular")
         player_controls.append(previous_button)
         player_controls.append(self.play_button)
         player_controls.append(skip_button)
@@ -111,8 +122,18 @@ class SpotifyGtkUI:
         self.track_title.set_text(info.title)
         if info.playing:
             self.play_button.set_icon_name("media-playback-pause-symbolic")
+            self.is_playing = True
         else:
             self.play_button.set_icon_name("media-playback-start-symbolic")
+            self.is_playing = False
+
+    def toggle_play(self, d):
+        self.is_playing = not self.is_playing
+        if self.is_playing:
+            self.play_button.set_icon_name("media-playback-pause-symbolic")
+        else:
+            self.play_button.set_icon_name("media-playback-start-symbolic")
+        self.callbacks["toggle_play"](d)
 
     def position_change(self):
         if self.position_change_delay is not None and self.position_change_delay.is_running():
