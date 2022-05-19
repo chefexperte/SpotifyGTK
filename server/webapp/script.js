@@ -84,6 +84,7 @@ function setReady(ready) {
 }
 
 if (_error) {
+    // if we have an error, show it.
     msg = window.document.getElementById("initMessage");
     msg.style.color = "red";
     msg.textContent = _error;
@@ -108,6 +109,9 @@ function getExternalPlayerData() {
             'Authorization': `Bearer ${_token}`
         }
     }).then(res => {
+        if (res.status === 401) {
+            requestRefresh();
+        }
         if (res.status === 204) return;
         return res.json().then(data => {
             // console.log(data)
@@ -118,7 +122,8 @@ function getExternalPlayerData() {
 
 function togglePlay(player) {
     player.getCurrentState().then(state => {
-        if (!state) {
+        // noinspection JSUnresolvedVariable
+        if (!state || state.playback_id === "") {
             // User is not playing music through the Web Playback SDK
             // fetch if currently playing or not
             if (extPlayerData == null) return;
@@ -166,7 +171,8 @@ function setVolume(player) {
     volume = Math.max(Math.min(100, volume), 0); // limit to value between 0 and 100
     // var json_data = JSON.stringify({volume_percent: volume});
     player.getCurrentState().then(state => {
-        if (!state) {
+        // noinspection JSUnresolvedVariable
+        if (!state || state.playback_id === "") {
             // noinspection JSUnresolvedVariable
             if (extPlayerData == null || extPlayerData.device == null) return;
             let device_id = extPlayerData.device.id;
@@ -185,8 +191,10 @@ function setVolume(player) {
 
 function setPosition(player) {
     let position = document.getElementById("playbackPosition").value; // get volume
+
     player.getCurrentState().then(state => {
-        if (!state) {
+        // noinspection JSUnresolvedVariable
+        if (!state || state.playback_id === "") {
             document.getElementById("position").innerText = position
             // noinspection JSUnresolvedVariable
             //if (extPlayerData == null || extPlayerData.device == null) return;
@@ -249,8 +257,12 @@ window.onSpotifyWebPlaybackSDKReady = () => {
         let name, position, duration, isPlaying;
         let reportState = async function () {
             let next_report = 1000;
+            if (Date.now()/1000 > _expire){
+                requestRefresh();
+            }
             await player.getCurrentState().then(async state => {
-                if (!state) {
+                // noinspection JSUnresolvedVariable
+                if (!state || state.playback_id === "") {
                     // We're not playing music in the webplayer
                     await getExternalPlayerData().then(data => {
                         extPlayerData = data
@@ -267,11 +279,17 @@ window.onSpotifyWebPlaybackSDKReady = () => {
                     isPlaying = extPlayerData.is_playing;
                     next_report = 1000;
                 } else {
+                    // console.log(state);
                     isPlaying = !state.paused;
                     // noinspection JSUnresolvedVariable
-                    name = state.track_window.current_track.name
+                    if (state.track_window && state.track_window.current_track)
+                        // noinspection JSUnresolvedVariable
+                        name = state.track_window.current_track.name
                     position = state.position;
                     duration = state.duration;
+                    if (duration === 0) {
+                        console.log("Duration is 0, something is off...")
+                    }
                     next_report = 800;
                 }
             });

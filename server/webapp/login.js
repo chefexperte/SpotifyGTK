@@ -35,10 +35,8 @@ const scopes = [
 ];
 const authEndpoint = 'https://accounts.spotify.com';
 
+_login = get.login;
 
-if (typeof _login === 'undefined') {
-    _login = get.login;
-}
 if (typeof _error === 'undefined') {
     _error = get.error;
 }
@@ -72,6 +70,12 @@ async function saveToken(token, expiration, refresh_token) {
 }
 
 
+if (_login) {
+    console.log("Redirecting to WebPlayer")
+    document.getElementById("initMessage").innerText = "Login success.";
+    window.location = "/index.html";
+}
+
 if (_error) {
     msg = window.document.getElementById("initMessage");
     msg.style.color = "red";
@@ -84,25 +88,9 @@ if (_error) {
     msg.parentNode.insertBefore(try_again, msg.nextSibling);
     console.log("Error received.");
 } else if (request_refresh) {
-    // noinspection JSUnresolvedVariable,JSDeprecatedSymbols
-    let b64 = btoa(`${clientId}:${clientSecret}`);
-    fetch(`${authEndpoint}/api/token`, {
-        method: 'POST',
-        body: new URLSearchParams({
-            'grant_type': 'refresh_token',
-            'refresh_token': _refresh
-        }),
-        headers: {
-            'Authorization': `Basic ${b64}`
-        }
-    }).then(res => res.json()).then(async data => {
-        // noinspection JSUnresolvedVariable,JSUndeclaredVariable
-        _token = data.access_token;
-        // noinspection JSUnresolvedVariable
-        let expire = 3600;
-        await saveToken(_token, expire, _refresh);
-        console.log("Token saved.");
-    });
+    console.log("Refreshing...")
+    requestRefresh();
+    //window.location = "/get_auth.html?login=true";
 } else if (_code) {
     // We have no error, but a code. So request a token now.
     // noinspection JSUnresolvedVariable,JSDeprecatedSymbols
@@ -128,15 +116,15 @@ if (_error) {
         console.log(_token);
         console.log(_expire);
         console.log(_refresh);
-        console.log("Token saved.");
+        console.log("Token saved.")
         window.location = "/get_auth.html?login=true";
         //console.log("GO TO INDEX HTML")
     });
     history.replaceState(null, "", location.href.split("?")[0]);
-} else if (_token || _login) {
+} else if (_token) {
     //everything is ready
-    //window.location = "/get_auth.html?login=true";
     document.getElementById("initMessage").innerText = "Login success.";
+    window.location = "/index.html";
     //console.log("TOKEN IST DA");
 } else {
     // noinspection JSUnresolvedVariable
