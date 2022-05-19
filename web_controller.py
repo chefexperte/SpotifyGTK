@@ -114,7 +114,7 @@ class WebController:
                 for i in range(0, 20):
                     if not self.driver.find_element(By.ID, "playHere").is_enabled():
                         self.driver_wait(0.5)
-                self.driver.find_element(By.ID, "playHere").click()
+                # self.driver.find_element(By.ID, "playHere").click()
                 # We have moved playback to the current device, now set player button clickable
                 self.callbacks["backend_ready"]()
         loop = Thread(target=self.report_loop, args=[])
@@ -141,9 +141,13 @@ class WebController:
         # self.report_loop()
 
     # noinspection PyUnusedLocal
-    def togglePlay(self, d):
+    def toggle_play(self, d):
         if self.element_exists(By.ID, "togglePlay"):
             self.driver.find_element(By.ID, "togglePlay").click()
+
+    def play_here(self):
+        if self.element_exists(By.ID, "playHere"):
+            self.driver.find_element(By.ID, "playHere").click()
 
     def set_volume(self, volume: int):
         if self.element_exists(By.ID, "volume"):

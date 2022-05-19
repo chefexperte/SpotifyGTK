@@ -16,3 +16,6 @@
 .player-control-button {
     min-width: 2em;
 }
+.blur {
+    filter: blur(5px);
+}

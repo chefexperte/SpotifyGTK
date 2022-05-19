@@ -15,6 +15,9 @@ class SpotifyGtkUI:
     position_slider: Gtk.Scale = None
     loudness_slider: Gtk.Scale = None
     track_title: Gtk.Label = None
+    loading_box: Gtk.Box = None
+    main_box: Gtk.Box = None
+    overlay_container: Gtk.Overlay = None
     callbacks: [()] = None
     volume_change_delay: DelayedThread = None
     position_change_delay: DelayedThread = None
@@ -33,8 +36,12 @@ class SpotifyGtkUI:
         css_provider.load_from_path(self.file_dir + "/style.css")
         win = Adw.ApplicationWindow(application=appl)
         win.css_provider = css_provider
-        main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        self.main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         headerbar = Gtk.HeaderBar()
+        play_here_button = Gtk.Button(icon_name="computer-symbolic")
+        play_here_button.connect("clicked", self.play_here)
+        headerbar.pack_end(play_here_button)
+
         upper_box = Gtk.Box()
         upper_box.add_css_class("toolbar")
         upper_box.add_css_class("osd")
@@ -99,13 +106,43 @@ class SpotifyGtkUI:
         # fixed.put(volume_button, 0, 0)
         # player_box.append(fixed)
         player_box.append(self.loudness_slider)
-        main_box.append(headerbar)
-        main_box.append(upper_box)
-        main_box.append(player_box)
-        # win.set_child(main_box)
-        win.set_content(main_box)
 
-        add_styling(main_box)
+        # Main box contains all content besides the headerbar
+        self.main_box.append(upper_box)
+        self.main_box.append(player_box)
+        self.main_box.set_hexpand(True)
+        self.main_box.set_vexpand(True)
+
+        self.overlay_container = Gtk.Overlay()
+        # self.overlay_container.set_size_request(600, 300)
+        self.overlay_container.set_hexpand(True)
+        self.overlay_container.set_vexpand(True)
+        # self.overlay_container.set_halign(Gtk.Align.CENTER)
+        # self.overlay_container.set_valign(Gtk.Align.CENTER)
+        self.overlay_container.set_child(self.main_box)
+
+        self.loading_box = Gtk.Box()
+        self.loading_box.set_hexpand(True)
+        self.loading_box.set_vexpand(True)
+        self.loading_box.set_halign(Gtk.Align.CENTER)
+        self.loading_box.set_valign(Gtk.Align.CENTER)
+        self.main_box.add_css_class("blur")
+        spinner = Gtk.Spinner()
+        spinner.set_size_request(50, 50)
+        spinner.start()
+        self.loading_box.append(spinner)
+
+        self.overlay_container.add_overlay(self.loading_box)
+        # self.overlay_container.add_overlay(self.main_box)
+
+        # Window Box contains headerbar + everything else(self.main_box)
+        window_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        window_box.append(headerbar)
+        window_box.append(self.overlay_container)
+
+        win.set_content(window_box)
+
+        add_styling(window_box)
 
         win.connect("close-request", lambda x: win.destroy())
         win.set_title("SpotifyGTK")
@@ -113,10 +150,14 @@ class SpotifyGtkUI:
 
     def backend_ready_callback(self):
         self.play_button.set_sensitive(True)
+        self.main_box.remove_css_class("blur")
+        self.overlay_container.remove_overlay(self.loading_box)
 
     def report_state_callback(self, info: PlaybackInfo):
         self.track_duration = info.duration
-        percent = (info.position / info.duration) * 100
+        percent = 0
+        if info.duration != 0:
+            percent = (info.position / info.duration) * 100
         if not self.position_change_delay or not self.position_change_delay.is_running():
             self.position_slider.set_value(percent)
         self.track_title.set_text(info.title)
@@ -150,6 +191,9 @@ class SpotifyGtkUI:
             self.volume_change_delay = \
                 DelayedThread(self.callbacks["set_volume"], [self.loudness_slider.get_value()], 200)
 
+    def play_here(self, d):
+        self.callbacks["play_here"]()
+
     def run_ui(self, callbacks):
         self.callbacks = callbacks
         self.app.connect('activate', self.on_activate)
@@ -157,18 +201,6 @@ class SpotifyGtkUI:
             self.app.run(None)
         except KeyboardInterrupt:
             pass
-
-
-def fade_in(container, button, slider):
-    pass
-    # container.remove(button)
-    # container.put(slider, 0, 0)
-
-
-def fade_out(container, button, slider):
-    pass
-    # container.remove(slider)
-    # container.put(button, 0, 0)
 
 
 css_provider = None

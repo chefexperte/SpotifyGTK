@@ -30,9 +30,13 @@ class SpotifyGTK:
 		self.log.addHandler(handler)
 
 		self.log.log(logging.INFO, "Starting SpotifyGTK")
-		self.callbacks = {"backend_ready": lambda: self.backend_ready(), "toggle_play": lambda d: self.toggle_play(d),
-		                  "report_state": lambda info: self.report_state(info), "set_volume": lambda volume:
-		                  self.set_volume(volume), "set_position": lambda pos: self.set_position(pos)}
+		self.callbacks = {"backend_ready": lambda: self.backend_ready(),
+		                  "toggle_play": lambda d: self.toggle_play(d),
+		                  "report_state": lambda info: self.report_state(info),
+		                  "set_volume": lambda volume: self.set_volume(volume),
+		                  "set_position": lambda pos: self.set_position(pos),
+		                  "play_here": lambda: self.play_here()
+		                  }
 
 	def run_server(self):
 		"""
@@ -60,7 +64,7 @@ class SpotifyGTK:
 		This callback is called from the ui, and tells the controller to press play
 		:param d: is given by the button connect event
 		"""
-		self.controller.togglePlay(d)
+		self.controller.toggle_play(d)
 
 	def backend_ready(self):
 		"""
@@ -76,6 +80,9 @@ class SpotifyGTK:
 
 	def set_position(self, position: int):
 		self.controller.set_position(position)
+
+	def play_here(self):
+		self.controller.play_here()
 
 	def run(self):
 		path = os.getcwd()
