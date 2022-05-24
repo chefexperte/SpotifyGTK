@@ -28,6 +28,8 @@ class DelayedThread:
         sleep(0.05)
         self.timer -= 50
         if self.timer <= 0:
+            if self.callback is None:
+                return
             cb = Thread(target=self.callback, args=self.args)
             cb.start()
             return
