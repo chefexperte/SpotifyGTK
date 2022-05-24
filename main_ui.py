@@ -12,6 +12,8 @@ from gi.repository import Gtk, Adw
 
 class SpotifyGtkUI:
     play_button: Gtk.Button = None
+    next_button: Gtk.Button = None
+    previous_button: Gtk.Button = None
     position_slider: Gtk.Scale = None
     loudness_slider: Gtk.Scale = None
     track_title: Gtk.Label = None
@@ -21,14 +23,19 @@ class SpotifyGtkUI:
     callbacks: [()] = None
     volume_change_delay: DelayedThread = None
     position_change_delay: DelayedThread = None
+    play_state_change_delay: DelayedThread = None
     track_duration: int = None
     is_playing = False
+    device_ready = False
+    controllable_widgets: [Gtk.Widget] = None
+    loading_label: Gtk.Label = None
 
     def __init__(self):
         self.file_dir = os.path.dirname(os.path.abspath(__file__))
         self.app = Adw.Application(application_id='de.flxtea.spotify')
         man = Adw.StyleManager.get_default()
         man.set_color_scheme(Adw.ColorScheme.PREFER_DARK)
+        self.controllable_widgets = []
 
     def on_activate(self, appl):
         global css_provider
@@ -50,7 +57,7 @@ class SpotifyGtkUI:
         upper_box.set_margin_start(15)
         upper_box.set_margin_end(15)
         upper_box.set_margin_top(15)
-        self.track_title = Gtk.Label(label="UPPER")
+        self.track_title = Gtk.Label(label="Loading...")
         upper_box.append(self.track_title)
         player_box = Gtk.Box()
         player_box.add_css_class("toolbar")
@@ -64,17 +71,17 @@ class SpotifyGtkUI:
         player_box.set_size_request(500, 0)
         player_controls = Gtk.Box()
         player_controls.add_css_class("linked")
-        previous_button = Gtk.Button(icon_name="media-skip-backward-symbolic")
+        self.previous_button = Gtk.Button(icon_name="media-skip-backward-symbolic")
         self.play_button = Gtk.Button(icon_name="media-playback-pause-symbolic")
         self.play_button.connect("clicked", self.toggle_play)
         self.play_button.set_sensitive(False)
-        skip_button = Gtk.Button(icon_name="media-skip-forward-symbolic")
+        self.next_button = Gtk.Button(icon_name="media-skip-forward-symbolic")
         self.play_button.add_css_class("circular")
-        previous_button.add_css_class("circular")
-        skip_button.add_css_class("circular")
-        player_controls.append(previous_button)
+        self.previous_button.add_css_class("circular")
+        self.next_button.add_css_class("circular")
+        player_controls.append(self.previous_button)
         player_controls.append(self.play_button)
-        player_controls.append(skip_button)
+        player_controls.append(self.next_button)
         player_box.append(player_controls)
         self.position_slider = Gtk.Scale()
         self.position_slider.set_range(0, 100)
@@ -100,8 +107,8 @@ class SpotifyGtkUI:
         self.loudness_slider.set_value(100)
         self.loudness_slider.add_css_class("fadein")
         self.loudness_slider.connect("value-changed", lambda a: self.volume_change())
-        volume_button_box.connect("enter", lambda a, b, c: fade_in(fixed, volume_button, self.loudness_slider))
-        volume_button_box.connect("leave", lambda a: fade_out(fixed, volume_button, self.loudness_slider))
+        # volume_button_box.connect("enter", lambda a, b, c: fade_in(fixed, volume_button, self.loudness_slider))
+        # volume_button_box.connect("leave", lambda a: fade_out(fixed, volume_button, self.loudness_slider))
         # fixed.put(loudness_slider, 0, 0)
         # fixed.put(volume_button, 0, 0)
         # player_box.append(fixed)
@@ -121,7 +128,7 @@ class SpotifyGtkUI:
         # self.overlay_container.set_valign(Gtk.Align.CENTER)
         self.overlay_container.set_child(self.main_box)
 
-        self.loading_box = Gtk.Box()
+        self.loading_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.loading_box.set_hexpand(True)
         self.loading_box.set_vexpand(True)
         self.loading_box.set_halign(Gtk.Align.CENTER)
@@ -130,7 +137,9 @@ class SpotifyGtkUI:
         spinner = Gtk.Spinner()
         spinner.set_size_request(50, 50)
         spinner.start()
+        self.loading_label = Gtk.Label(label="Loading...")
         self.loading_box.append(spinner)
+        self.loading_box.append(self.loading_label)
 
         self.overlay_container.add_overlay(self.loading_box)
         # self.overlay_container.add_overlay(self.main_box)
@@ -142,16 +151,30 @@ class SpotifyGtkUI:
 
         win.set_content(window_box)
 
-        add_styling(window_box)
+        add_styling({window_box})
 
         win.connect("close-request", lambda x: win.destroy())
         win.set_title("SpotifyGTK")
+
+        self.controllable_widgets.append(self.play_button)
+        self.controllable_widgets.append(self.position_slider)
+        self.controllable_widgets.append(self.loudness_slider)
+        self.controllable_widgets.append(self.next_button)
+        self.controllable_widgets.append(self.previous_button)
+        for widget in self.controllable_widgets:
+            if widget is None:
+                print(str(widget) + " is None.")
+                continue
+            widget.set_sensitive(False)
+
         win.present()
 
     def backend_ready_callback(self):
-        self.play_button.set_sensitive(True)
+        for widget in self.controllable_widgets:
+            widget.set_sensitive(True)
         self.main_box.remove_css_class("blur")
         self.overlay_container.remove_overlay(self.loading_box)
+        self.device_ready = True
 
     def report_state_callback(self, info: PlaybackInfo):
         self.track_duration = info.duration
@@ -162,18 +185,22 @@ class SpotifyGtkUI:
             self.position_slider.set_value(percent)
         self.track_title.set_text(info.title)
         if info.playing:
-            self.play_button.set_icon_name("media-playback-pause-symbolic")
+            if self.play_state_change_delay is None or not self.play_state_change_delay.is_running():
+                self.play_button.set_icon_name("media-playback-pause-symbolic")
             self.is_playing = True
         else:
-            self.play_button.set_icon_name("media-playback-start-symbolic")
+            if self.play_state_change_delay is None or not self.play_state_change_delay.is_running():
+                self.play_button.set_icon_name("media-playback-start-symbolic")
             self.is_playing = False
 
     def toggle_play(self, d):
         self.is_playing = not self.is_playing
-        if self.is_playing:
-            self.play_button.set_icon_name("media-playback-pause-symbolic")
-        else:
-            self.play_button.set_icon_name("media-playback-start-symbolic")
+        if self.play_state_change_delay is None or not self.play_state_change_delay.is_running():
+            self.play_state_change_delay = DelayedThread(None, [], 300)
+            if self.is_playing:
+                self.play_button.set_icon_name("media-playback-pause-symbolic")
+            else:
+                self.play_button.set_icon_name("media-playback-start-symbolic")
         self.callbacks["toggle_play"](d)
 
     def position_change(self):

@@ -41,14 +41,12 @@ class SpotifyGTK:
 	def run_server(self):
 		"""
 		This method starts the webserver, should be run in a thread
-		:param serv: A initialized Webserver
 		"""
 		self.server.run()
 
 	def run_web_controller(self):
 		"""
 		This method starts the selenium web controller with the callbacks variable
-		:param ctrl: A initialized WebController
 		"""
 		self.controller.run_controller(self.callbacks)
 
@@ -64,7 +62,7 @@ class SpotifyGTK:
 		This callback is called from the ui, and tells the controller to press play
 		:param d: is given by the button connect event
 		"""
-		self.controller.toggle_play(d)
+		Thread(target=self.controller.toggle_play, args=[d]).start()
 
 	def backend_ready(self):
 		"""
@@ -76,13 +74,13 @@ class SpotifyGTK:
 		self.window.report_state_callback(info)
 
 	def set_volume(self, volume: int):
-		self.controller.set_volume(volume)
+		Thread(target=self.controller.set_volume, args=[volume]).start()
 
 	def set_position(self, position: int):
-		self.controller.set_position(position)
+		Thread(target=self.controller.set_position, args=[position]).start()
 
 	def play_here(self):
-		self.controller.play_here()
+		Thread(target=self.controller.play_here, args=[]).start()
 
 	def run(self):
 		path = os.getcwd()
