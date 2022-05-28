@@ -102,21 +102,19 @@ class WebController:
         self.driver = webdriver.Firefox(options=options)
         self.driver.get("http://localhost:8080/")
         self.driver_wait(2)
-        ready = True
-        if self.driver.current_url.count("spotify.com") > 0:
-            if True: #self.perform_auth():
-                print("Auth and login success.")
-            else:
-                print("There has been a problem with login or auth.")
-                ready = False
-        if ready:
-            if self.element_exists(By.ID, "playHere"):
-                for i in range(0, 20):
-                    if not self.driver.find_element(By.ID, "playHere").is_enabled():
-                        self.driver_wait(0.5)
-                # self.driver.find_element(By.ID, "playHere").click()
-                # We have moved playback to the current device, now set player button clickable
-                self.callbacks["backend_ready"]()
+        timer = 0
+        if self.element_exists(By.ID, "playHere"):
+            while True:
+                timer += 1
+                if not self.driver.find_element(By.ID, "playHere").is_enabled():
+                    self.driver_wait(0.5)
+                    if timer > 20:
+                        self.callbacks["update_loading_message"]("Taking longer than usual...\nPlease stand by...")
+                else:
+                    break
+            # self.driver.find_element(By.ID, "playHere").click()
+            # We have moved playback to the current device, now set player button clickable
+            self.callbacks["backend_ready"]()
         loop = Thread(target=self.report_loop, args=[])
         loop.start()
 

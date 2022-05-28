@@ -6,6 +6,7 @@ from threading import Thread
 from time import sleep
 
 import auth_controller
+from data_wrapper import TrackData
 from playback_info import PlaybackInfo
 from web_controller import WebController
 from main_ui import SpotifyGtkUI
@@ -35,14 +36,16 @@ class SpotifyGTK:
 		                  "report_state": lambda info: self.report_state(info),
 		                  "set_volume": lambda volume: self.set_volume(volume),
 		                  "set_position": lambda pos: self.set_position(pos),
-		                  "play_here": lambda: self.play_here()
+		                  "play_here": lambda: self.play_here(),
+		                  "update_loading_message": lambda message: self.update_loading_message(message),
+		                  "get_track_info": lambda track_info: self.get_track_info(track_info)
 		                  }
 
 	def run_server(self):
 		"""
 		This method starts the webserver, should be run in a thread
 		"""
-		self.server.run()
+		self.server.run(self.callbacks)
 
 	def run_web_controller(self):
 		"""
@@ -81,6 +84,12 @@ class SpotifyGTK:
 
 	def play_here(self):
 		Thread(target=self.controller.play_here, args=[]).start()
+
+	def update_loading_message(self, message: str):
+		self.window.update_loading_message(message)
+
+	def get_track_info(self, track_info: TrackData):
+		self.window.get_track_info(track_info)
 
 	def run(self):
 		path = os.getcwd()

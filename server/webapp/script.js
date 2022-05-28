@@ -254,10 +254,10 @@ window.onSpotifyWebPlaybackSDKReady = () => {
         };
         // report state loop will put information on the page every second
         let timer;
-        let name, position, duration, isPlaying;
+        let name, position, duration, isPlaying, trackID;
         let reportState = async function () {
             let next_report = 1000;
-            if (Date.now()/1000 > _expire){
+            if (Date.now() / 1000 > _expire) {
                 requestRefresh();
             }
             await player.getCurrentState().then(async state => {
@@ -272,6 +272,7 @@ window.onSpotifyWebPlaybackSDKReady = () => {
                         name = extPlayerData.item.name;
                         // noinspection JSUnresolvedVariable
                         duration = extPlayerData.item.duration_ms;
+                        trackID = extPlayerData.item.id;
                     }
                     // noinspection JSUnresolvedVariable
                     position = extPlayerData.progress_ms;
@@ -282,9 +283,20 @@ window.onSpotifyWebPlaybackSDKReady = () => {
                     // console.log(state);
                     isPlaying = !state.paused;
                     // noinspection JSUnresolvedVariable
-                    if (state.track_window && state.track_window.current_track)
+                    if (state.track_window && state.track_window.current_track) {
                         // noinspection JSUnresolvedVariable
                         name = state.track_window.current_track.name
+                        // noinspection JSUnresolvedVariable
+                        trackID = state.track_window.current_track.id
+                        if (document.getElementById("trackID").innerText !== trackID) {
+                            let data = new FormData();
+                            data.append("data",  JSON.stringify(state.track_window.current_track));
+                            console.log(state.track_window.current_track)
+                            let xhr = new XMLHttpRequest();
+                            await xhr.open('post', 'save_track_info.py', false);
+                            await xhr.send(data);
+                        }
+                    }
                     position = state.position;
                     duration = state.duration;
                     if (duration === 0) {
@@ -298,6 +310,7 @@ window.onSpotifyWebPlaybackSDKReady = () => {
             document.getElementById("position").innerText = position;
             document.getElementById("trackDuration").innerText = duration;
             document.getElementById("isPlaying").innerText = isPlaying;
+            document.getElementById("trackID").innerText = trackID;
 
             setMediaInformation(name, "TODO");
 
