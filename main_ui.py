@@ -30,24 +30,24 @@ class SpotifyGtkUI:
     controllable_widgets: [Gtk.Widget] = None
     loading_label: Gtk.Label = None
 
-    def __init__(self):
-        self.file_dir = os.path.dirname(os.path.abspath(__file__))
-        self.app = Adw.Application(application_id='de.flxtea.spotify')
-        man = Adw.StyleManager.get_default()
-        man.set_color_scheme(Adw.ColorScheme.PREFER_DARK)
-        self.controllable_widgets = []
+	def __init__(self):
+		self.file_dir = os.path.dirname(os.path.abspath(__file__))
+		self.app = Adw.Application(application_id='de.flxtea.spotify')
+		man = Adw.StyleManager.get_default()
+		man.set_color_scheme(Adw.ColorScheme.PREFER_DARK)
+		self.controllable_widgets = []
 
-    def on_activate(self, appl):
-        global css_provider
-        css_provider = Gtk.CssProvider()
-        css_provider.load_from_path(self.file_dir + "/style.css")
-        win = Adw.ApplicationWindow(application=appl)
-        win.css_provider = css_provider
-        self.main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        headerbar = Gtk.HeaderBar()
-        play_here_button = Gtk.Button(icon_name="computer-symbolic")
-        play_here_button.connect("clicked", self.play_here)
-        headerbar.pack_end(play_here_button)
+	def on_activate(self, appl):
+		global css_provider
+		css_provider = Gtk.CssProvider()
+		css_provider.load_from_path(self.file_dir + "/style.css")
+		win = Adw.ApplicationWindow(application=appl)
+		win.css_provider = css_provider
+		self.main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+		headerbar = Gtk.HeaderBar()
+		play_here_button = Gtk.Button(icon_name="computer-symbolic")
+		play_here_button.connect("clicked", self.play_here)
+		headerbar.pack_end(play_here_button)
 
         upper_box = Gtk.Box()
         upper_box.add_css_class("toolbar")
@@ -114,19 +114,16 @@ class SpotifyGtkUI:
         # player_box.append(fixed)
         player_box.append(self.loudness_slider)
 
-        # Main box contains all content besides the headerbar
-        self.main_box.append(upper_box)
-        self.main_box.append(player_box)
-        self.main_box.set_hexpand(True)
-        self.main_box.set_vexpand(True)
+		# Main box contains all content besides the headerbar
+		self.main_box.append(self.upper_box)
+		self.main_box.append(player_box)
+		self.main_box.set_hexpand(True)
+		self.main_box.set_vexpand(True)
 
-        self.overlay_container = Gtk.Overlay()
-        # self.overlay_container.set_size_request(600, 300)
-        self.overlay_container.set_hexpand(True)
-        self.overlay_container.set_vexpand(True)
-        # self.overlay_container.set_halign(Gtk.Align.CENTER)
-        # self.overlay_container.set_valign(Gtk.Align.CENTER)
-        self.overlay_container.set_child(self.main_box)
+		self.overlay_container = Gtk.Overlay()
+		self.overlay_container.set_hexpand(True)
+		self.overlay_container.set_vexpand(True)
+		self.overlay_container.set_child(self.main_box)
 
         self.loading_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.loading_box.set_hexpand(True)
@@ -141,33 +138,32 @@ class SpotifyGtkUI:
         self.loading_box.append(spinner)
         self.loading_box.append(self.loading_label)
 
-        self.overlay_container.add_overlay(self.loading_box)
-        # self.overlay_container.add_overlay(self.main_box)
+		self.overlay_container.add_overlay(self.loading_box)
 
-        # Window Box contains headerbar + everything else(self.main_box)
-        window_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        window_box.append(headerbar)
-        window_box.append(self.overlay_container)
+		# Window Box contains headerbar + everything else(self.main_box)
+		window_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+		window_box.append(headerbar)
+		window_box.append(self.overlay_container)
 
-        win.set_content(window_box)
+		win.set_content(window_box)
 
-        add_styling({window_box})
+		add_styling({window_box})
 
-        win.connect("close-request", lambda x: win.destroy())
-        win.set_title("SpotifyGTK")
+		win.connect("close-request", lambda x: win.destroy())
+		win.set_title("SpotifyGTK")
 
-        self.controllable_widgets.append(self.play_button)
-        self.controllable_widgets.append(self.position_slider)
-        self.controllable_widgets.append(self.loudness_slider)
-        self.controllable_widgets.append(self.next_button)
-        self.controllable_widgets.append(self.previous_button)
-        for widget in self.controllable_widgets:
-            if widget is None:
-                print(str(widget) + " is None.")
-                continue
-            widget.set_sensitive(False)
+		self.controllable_widgets.append(self.play_button)
+		self.controllable_widgets.append(self.position_slider)
+		self.controllable_widgets.append(self.loudness_slider)
+		self.controllable_widgets.append(self.next_button)
+		self.controllable_widgets.append(self.previous_button)
+		for widget in self.controllable_widgets:
+			if widget is None:
+				print(str(widget) + " is None.")
+				continue
+			widget.set_sensitive(False)
 
-        win.present()
+		win.present()
 
     def backend_ready_callback(self):
         for widget in self.controllable_widgets:
@@ -176,50 +172,50 @@ class SpotifyGtkUI:
         self.overlay_container.remove_overlay(self.loading_box)
         self.device_ready = True
 
-    def report_state_callback(self, info: PlaybackInfo):
-        self.track_duration = info.duration
-        percent = 0
-        if info.duration != 0:
-            percent = (info.position / info.duration) * 100
-        if not self.position_change_delay or not self.position_change_delay.is_running():
-            self.position_slider.set_value(percent)
-        self.track_title.set_text(info.title)
-        if info.playing:
-            if self.play_state_change_delay is None or not self.play_state_change_delay.is_running():
-                self.play_button.set_icon_name("media-playback-pause-symbolic")
-            self.is_playing = True
-        else:
-            if self.play_state_change_delay is None or not self.play_state_change_delay.is_running():
-                self.play_button.set_icon_name("media-playback-start-symbolic")
-            self.is_playing = False
+	def report_state_callback(self, info: PlaybackInfo):
+		self.track_duration = info.duration
+		percent = 0
+		if info.duration != 0:
+			percent = (info.position / info.duration) * 100
+		if not self.position_change_delay or not self.position_change_delay.is_running():
+			self.position_slider.set_value(percent)
+		self.track_title.set_text(info.title)
+		if info.playing:
+			if self.play_state_change_delay is None or not self.play_state_change_delay.is_running():
+				self.play_button.set_icon_name("media-playback-pause-symbolic")
+			self.is_playing = True
+		else:
+			if self.play_state_change_delay is None or not self.play_state_change_delay.is_running():
+				self.play_button.set_icon_name("media-playback-start-symbolic")
+			self.is_playing = False
 
-    def toggle_play(self, d):
-        self.is_playing = not self.is_playing
-        if self.play_state_change_delay is None or not self.play_state_change_delay.is_running():
-            self.play_state_change_delay = DelayedThread(None, [], 300)
-            if self.is_playing:
-                self.play_button.set_icon_name("media-playback-pause-symbolic")
-            else:
-                self.play_button.set_icon_name("media-playback-start-symbolic")
-        self.callbacks["toggle_play"](d)
+	def toggle_play(self, d):
+		self.is_playing = not self.is_playing
+		if self.play_state_change_delay is None or not self.play_state_change_delay.is_running():
+			self.play_state_change_delay = DelayedThread(None, [], 300)
+			if self.is_playing:
+				self.play_button.set_icon_name("media-playback-pause-symbolic")
+			else:
+				self.play_button.set_icon_name("media-playback-start-symbolic")
+		self.callbacks["toggle_play"](d)
 
-    def position_change(self):
-        if self.position_change_delay is not None and self.position_change_delay.is_running():
-            self.position_change_delay.args = [self.position_slider.get_value() / 100 * self.track_duration]
-        else:
-            self.position_change_delay = \
-                DelayedThread(self.callbacks["set_position"],
-                              [self.position_slider.get_value() / 100 * self.track_duration], 300)
+	def position_change(self):
+		if self.position_change_delay is not None and self.position_change_delay.is_running():
+			self.position_change_delay.args = [self.position_slider.get_value() / 100 * self.track_duration]
+		else:
+			self.position_change_delay = \
+				DelayedThread(self.callbacks["set_position"],
+				              [self.position_slider.get_value() / 100 * self.track_duration], 300)
 
-    def volume_change(self):
-        if self.volume_change_delay is not None and self.volume_change_delay.is_running():
-            self.volume_change_delay.args = [self.loudness_slider.get_value()]
-        else:
-            self.volume_change_delay = \
-                DelayedThread(self.callbacks["set_volume"], [self.loudness_slider.get_value()], 200)
+	def volume_change(self):
+		if self.volume_change_delay is not None and self.volume_change_delay.is_running():
+			self.volume_change_delay.args = [self.loudness_slider.get_value()]
+		else:
+			self.volume_change_delay = \
+				DelayedThread(self.callbacks["set_volume"], [self.loudness_slider.get_value()], 200)
 
-    def play_here(self, d):
-        self.callbacks["play_here"]()
+	def play_here(self, d):
+		self.callbacks["play_here"]()
 
     def run_ui(self, callbacks):
         self.callbacks = callbacks
@@ -234,8 +230,8 @@ css_provider = None
 
 
 def add_styling(widget):
-    global css_provider
-    for widget in widget:
-        context = widget.get_style_context()
-        context.add_provider(css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
-        add_styling(widget)
+	global css_provider
+	for widget in widget:
+		context = widget.get_style_context()
+		context.add_provider(css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
+		add_styling(widget)
