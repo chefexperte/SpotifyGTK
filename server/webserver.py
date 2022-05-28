@@ -6,6 +6,8 @@ from os import getcwd
 # get path of file
 # local_path = os.path.dirname(os.path.abspath(__file__))
 # setting ip and port
+from server.save_track_info import send_track_info
+
 hostName = "localhost"
 serverPort = 8080
 
@@ -15,8 +17,8 @@ handler.cgi_directories.append('/cgi-files')
 
 
 class MyServer(handler):
-
-    cgi_list: [str] = None
+	cgi_list: [str] = None
+	callbacks: [] = None
 
 	def get_post_data(self) -> dict[str, str]:
 		"""
@@ -48,13 +50,24 @@ class MyServer(handler):
 		# if file in valid_files:
 		#     self.wfile.write(open("webapp/" + file, "rb").read())
 
-    def do_POST(self):
-        if self.clean_path() in self.cgi_list:
-            self.path = "/cgi-files" + self.path
-            CGIHTTPRequestHandler.do_POST(self)
-        else:
-            self.send_response(501, "Not allowed")
-            self.end_headers()
+	def do_POST(self):
+		if self.clean_path() == "save_track_info.py":
+			form = cgi.FieldStorage(fp=self.rfile, headers=self.headers,
+			                        environ={'REQUEST_METHOD': 'POST', 'CONTENT_TYPE': self.headers['Content-Type']})
+			if "data" not in form:
+				print("Data missing when calling save_track_info.py")
+			else:
+				send_track_info(form["data"].value, self.callbacks["get_track_info"])
+			self.send_response(200)
+			self.end_headers()
+			self.wfile.write(b"OK")
+			return
+		if self.clean_path() in self.cgi_list:
+			self.path = "/cgi-files" + self.path
+			CGIHTTPRequestHandler.do_POST(self)
+		else:
+			self.send_response(501, "Not allowed")
+			self.end_headers()
 
 
 def prepare_php_ini():
@@ -71,18 +84,22 @@ def prepare_cgi_list():
 
 
 class Webserver:
+	callbacks: [] = None
+	web_server = None
 
-    def __init__(self):
-        file_path = os.path.dirname(os.path.abspath(__file__))
-        os.chdir(file_path)
-        prepare_php_ini()
-        prepare_cgi_list()
-        self.web_server = HTTPServer((hostName, serverPort), MyServer)
-        # noinspection HttpUrlsUsage
-        print("Server started http://%s:%s" % (hostName, serverPort))
+	def __init__(self):
+		file_path = os.path.dirname(os.path.abspath(__file__))
+		os.chdir(file_path)
+		prepare_php_ini()
+		prepare_cgi_list()
+		# noinspection HttpUrlsUsage
+		print("Server started http://%s:%s" % (hostName, serverPort))
 
-    def run(self):
-        self.web_server.serve_forever()
+	def run(self, callbacks: []):
+		self.callbacks = callbacks
+		MyServer.callbacks = self.callbacks
+		self.web_server = HTTPServer((hostName, serverPort), MyServer)
+		self.web_server.serve_forever()
 
 	def stop(self):
 		self.web_server.server_close()
