@@ -2,33 +2,39 @@ import os
 
 import gi
 
+import static_strings as ss
+from data_wrapper import TrackData
 from playback_info import PlaybackInfo
 from thread_tools.delayed_thread import DelayedThread
 
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
-from gi.repository import Gtk, Adw
+from gi.repository import Gtk, Adw, GdkPixbuf
 
 
 class SpotifyGtkUI:
-    play_button: Gtk.Button = None
-    next_button: Gtk.Button = None
-    previous_button: Gtk.Button = None
-    position_slider: Gtk.Scale = None
-    loudness_slider: Gtk.Scale = None
-    track_title: Gtk.Label = None
-    loading_box: Gtk.Box = None
-    main_box: Gtk.Box = None
-    overlay_container: Gtk.Overlay = None
-    callbacks: [()] = None
-    volume_change_delay: DelayedThread = None
-    position_change_delay: DelayedThread = None
-    play_state_change_delay: DelayedThread = None
-    track_duration: int = None
-    is_playing = False
-    device_ready = False
-    controllable_widgets: [Gtk.Widget] = None
-    loading_label: Gtk.Label = None
+	play_button: Gtk.Button = None
+	next_button: Gtk.Button = None
+	previous_button: Gtk.Button = None
+	position_slider: Gtk.Scale = None
+	loudness_slider: Gtk.Scale = None
+	upper_box: Gtk.Box = None
+	track_title: Gtk.Label = None
+	track_artists: Gtk.Box = None
+	track_image: Gtk.Image = None
+	loading_box: Gtk.Box = None
+	main_box: Gtk.Box = None
+	overlay_container: Gtk.Overlay = None
+	loading_spinner: Gtk.Spinner = None
+	callbacks: [()] = None
+	volume_change_delay: DelayedThread = None
+	position_change_delay: DelayedThread = None
+	play_state_change_delay: DelayedThread = None
+	track_duration: int = None
+	is_playing = False
+	device_ready = False
+	controllable_widgets: [Gtk.Widget] = None
+	loading_label: Gtk.Label = None
 
 	def __init__(self):
 		self.file_dir = os.path.dirname(os.path.abspath(__file__))
@@ -49,70 +55,79 @@ class SpotifyGtkUI:
 		play_here_button.connect("clicked", self.play_here)
 		headerbar.pack_end(play_here_button)
 
-        upper_box = Gtk.Box()
-        upper_box.add_css_class("toolbar")
-        upper_box.add_css_class("osd")
+		# Upper part
+		self.upper_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+		self.upper_box.add_css_class("toolbar")
+		self.upper_box.add_css_class("osd")
+		self.upper_box.set_margin_bottom(15)
+		self.upper_box.set_margin_start(15)
+		self.upper_box.set_margin_end(15)
+		self.upper_box.set_margin_top(15)
+		self.track_title = Gtk.Label(label="Loading...")
+		pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(filename=ss.image_cache + ".no_album", width=200, height=200,
+		                                                 preserve_aspect_ratio=True)
+		self.track_image = Gtk.Image.new_from_pixbuf(pixbuf)
+		self.track_image.set_vexpand(True)
+		# self.track_image.set_hexpand(True)
+		self.track_image.set_size_request(100, 100)
+		self.upper_box.append(self.track_image)
+		title_artist_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+		title_artist_box.append(self.track_title)
+		self.track_artists = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+		self.track_artists.append(Gtk.Button(label="ARTIST 1"))
+		title_artist_box.append(self.track_artists)
+		self.upper_box.append(title_artist_box)
 
-        upper_box.set_margin_bottom(15)
-        upper_box.set_margin_start(15)
-        upper_box.set_margin_end(15)
-        upper_box.set_margin_top(15)
-        self.track_title = Gtk.Label(label="Loading...")
-        upper_box.append(self.track_title)
-        player_box = Gtk.Box()
-        player_box.add_css_class("toolbar")
-        player_box.add_css_class("osd")
-        player_box.set_vexpand(True)
-        player_box.set_valign(Gtk.Align.END)
-        player_box.set_margin_bottom(15)
-        player_box.set_margin_start(15)
-        player_box.set_margin_end(15)
-        player_box.set_margin_top(15)
-        player_box.set_size_request(500, 0)
-        player_controls = Gtk.Box()
-        player_controls.add_css_class("linked")
-        self.previous_button = Gtk.Button(icon_name="media-skip-backward-symbolic")
-        self.play_button = Gtk.Button(icon_name="media-playback-pause-symbolic")
-        self.play_button.connect("clicked", self.toggle_play)
-        self.play_button.set_sensitive(False)
-        self.next_button = Gtk.Button(icon_name="media-skip-forward-symbolic")
-        self.play_button.add_css_class("circular")
-        self.previous_button.add_css_class("circular")
-        self.next_button.add_css_class("circular")
-        player_controls.append(self.previous_button)
-        player_controls.append(self.play_button)
-        player_controls.append(self.next_button)
-        player_box.append(player_controls)
-        self.position_slider = Gtk.Scale()
-        self.position_slider.set_range(0, 100)
-        self.position_slider.set_hexpand(True)
-        self.position_slider.set_value(0)
-        self.position_slider.connect("change-value", lambda a, b, c: self.position_change())
-        player_box.append(self.position_slider)
-        volume_button_box = Gtk.EventControllerMotion()
-        volume_button = Gtk.Button(icon_name="audio-volume-high")
-        context = volume_button.get_style_context()
-        context.add_provider(css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
-        volume_button.add_controller(volume_button_box)
-        volume_button.add_css_class("circular")
-        volume_button.add_css_class("fadeout")
-        volume_button.set_vexpand(False)
-        volume_button.set_can_focus(False)
-        fixed = Gtk.Fixed()
-        fixed.set_valign(Gtk.Align.CENTER)
-        self.loudness_slider = Gtk.Scale()
-        self.loudness_slider.set_inverted(True)
-        self.loudness_slider.set_range(0, 100)
-        self.loudness_slider.set_hexpand(False)
-        self.loudness_slider.set_value(100)
-        self.loudness_slider.add_css_class("fadein")
-        self.loudness_slider.connect("value-changed", lambda a: self.volume_change())
-        # volume_button_box.connect("enter", lambda a, b, c: fade_in(fixed, volume_button, self.loudness_slider))
-        # volume_button_box.connect("leave", lambda a: fade_out(fixed, volume_button, self.loudness_slider))
-        # fixed.put(loudness_slider, 0, 0)
-        # fixed.put(volume_button, 0, 0)
-        # player_box.append(fixed)
-        player_box.append(self.loudness_slider)
+		# Playback bar
+		player_box = Gtk.Box()
+		player_box.add_css_class("toolbar")
+		player_box.add_css_class("osd")
+		player_box.set_vexpand(True)
+		player_box.set_valign(Gtk.Align.END)
+		player_box.set_margin_bottom(15)
+		player_box.set_margin_start(15)
+		player_box.set_margin_end(15)
+		player_box.set_margin_top(15)
+		player_box.set_size_request(500, 0)
+		player_controls = Gtk.Box()
+		player_controls.add_css_class("linked")
+		self.previous_button = Gtk.Button(icon_name="media-skip-backward-symbolic")
+		self.play_button = Gtk.Button(icon_name="media-playback-pause-symbolic")
+		self.play_button.connect("clicked", self.toggle_play)
+		self.play_button.set_sensitive(False)
+		self.next_button = Gtk.Button(icon_name="media-skip-forward-symbolic")
+		self.play_button.add_css_class("circular")
+		self.previous_button.add_css_class("circular")
+		self.next_button.add_css_class("circular")
+		player_controls.append(self.previous_button)
+		player_controls.append(self.play_button)
+		player_controls.append(self.next_button)
+		player_box.append(player_controls)
+		self.position_slider = Gtk.Scale()
+		self.position_slider.set_range(0, 100)
+		self.position_slider.set_hexpand(True)
+		self.position_slider.set_value(0)
+		self.position_slider.connect("change-value", lambda a, b, c: self.position_change())
+		player_box.append(self.position_slider)
+		volume_button_box = Gtk.EventControllerMotion()
+		volume_button = Gtk.Button(icon_name="audio-volume-high")
+		context = volume_button.get_style_context()
+		context.add_provider(css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
+		volume_button.add_controller(volume_button_box)
+		volume_button.add_css_class("circular")
+		volume_button.add_css_class("fadeout")
+		volume_button.set_vexpand(False)
+		volume_button.set_can_focus(False)
+		fixed = Gtk.Fixed()
+		fixed.set_valign(Gtk.Align.CENTER)
+		self.loudness_slider = Gtk.Scale()
+		self.loudness_slider.set_inverted(True)
+		self.loudness_slider.set_range(0, 100)
+		self.loudness_slider.set_hexpand(False)
+		self.loudness_slider.set_value(100)
+		self.loudness_slider.add_css_class("fadein")
+		self.loudness_slider.connect("value-changed", lambda a: self.volume_change())
+		player_box.append(self.loudness_slider)
 
 		# Main box contains all content besides the headerbar
 		self.main_box.append(self.upper_box)
@@ -125,18 +140,18 @@ class SpotifyGtkUI:
 		self.overlay_container.set_vexpand(True)
 		self.overlay_container.set_child(self.main_box)
 
-        self.loading_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        self.loading_box.set_hexpand(True)
-        self.loading_box.set_vexpand(True)
-        self.loading_box.set_halign(Gtk.Align.CENTER)
-        self.loading_box.set_valign(Gtk.Align.CENTER)
-        self.main_box.add_css_class("blur")
-        spinner = Gtk.Spinner()
-        spinner.set_size_request(50, 50)
-        spinner.start()
-        self.loading_label = Gtk.Label(label="Loading...")
-        self.loading_box.append(spinner)
-        self.loading_box.append(self.loading_label)
+		self.loading_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+		self.loading_box.set_hexpand(True)
+		self.loading_box.set_vexpand(True)
+		self.loading_box.set_halign(Gtk.Align.CENTER)
+		self.loading_box.set_valign(Gtk.Align.CENTER)
+		self.main_box.add_css_class("blur")
+		self.loading_spinner = Gtk.Spinner()
+		self.loading_spinner.set_size_request(50, 50)
+		self.loading_spinner.start()
+		self.loading_label = Gtk.Label(label="Loading...")
+		self.loading_box.append(self.loading_spinner)
+		self.loading_box.append(self.loading_label)
 
 		self.overlay_container.add_overlay(self.loading_box)
 
@@ -165,12 +180,17 @@ class SpotifyGtkUI:
 
 		win.present()
 
-    def backend_ready_callback(self):
-        for widget in self.controllable_widgets:
-            widget.set_sensitive(True)
-        self.main_box.remove_css_class("blur")
-        self.overlay_container.remove_overlay(self.loading_box)
-        self.device_ready = True
+	def backend_ready_callback(self):
+		DelayedThread(self.backend_ready, [], 400)
+		self.update_loading_message("Ready!")
+		self.loading_spinner.stop()
+
+	def backend_ready(self):
+		for widget in self.controllable_widgets:
+			widget.set_sensitive(True)
+		self.main_box.remove_css_class("blur")
+		self.overlay_container.remove_overlay(self.loading_box)
+		self.device_ready = True
 
 	def report_state_callback(self, info: PlaybackInfo):
 		self.track_duration = info.duration
@@ -217,13 +237,27 @@ class SpotifyGtkUI:
 	def play_here(self, d):
 		self.callbacks["play_here"]()
 
-    def run_ui(self, callbacks):
-        self.callbacks = callbacks
-        self.app.connect('activate', self.on_activate)
-        try:
-            self.app.run(None)
-        except KeyboardInterrupt:
-            pass
+	def update_loading_message(self, message: str):
+		self.loading_label.set_text(message)
+
+	def get_track_info(self, track_info: TrackData):
+		print("New track data loaded")
+		file_name = track_info.get_image()
+		if file_name is not None:
+			pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(filename=file_name, width=200, height=200,
+			                                                 preserve_aspect_ratio=True)
+			self.track_image.set_from_pixbuf(pixbuf)
+			print("New image set")
+		else:
+			print("Could not load file :(")
+
+	def run_ui(self, callbacks):
+		self.callbacks = callbacks
+		self.app.connect('activate', self.on_activate)
+		try:
+			self.app.run(None)
+		except KeyboardInterrupt:
+			pass
 
 
 css_provider = None
