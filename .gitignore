@@ -7,3 +7,5 @@ geckodriver.log
 server/php.ini
 server/token.txt
 server/client-auth.txt
+image_cache/*
+!image_cache/.no_album
