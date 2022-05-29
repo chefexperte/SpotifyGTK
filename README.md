@@ -4,6 +4,10 @@ Currently there is not much to see yet, but this is supposed to be a Spotify pla
 
 https://user-images.githubusercontent.com/12102112/163695312-6972c397-a646-4398-ba02-9986050ce15a.mp4
 
+## New Showcase Screenshot!
+![Screenshot from 2022-05-29 04-01-40](https://user-images.githubusercontent.com/12102112/170848955-893e0463-6800-48a7-bb8d-c351af4ee0df.png)
+
+
 # How does it work?
 Or rather will work when it's done. 
 SpotifyGTK, as I do plan at the moment will have three main components. 
