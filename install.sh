@@ -13,3 +13,5 @@ chmod +x geckodriver
 echo "Installing pip packages"
 pip install selenium
 pip install pygobject
+pip install opencv-python
+pip install numpy

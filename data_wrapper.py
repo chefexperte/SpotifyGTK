@@ -3,6 +3,7 @@ import re
 import urllib.request
 from os.path import exists
 
+import image_tools
 import static_strings as ss
 
 
@@ -30,7 +31,11 @@ class TrackData:
 		if not exists(file_path):
 			# Download image
 			urllib.request.urlretrieve(self.image_url, file_path)
-			print("Downloaded image")
+			if image_tools.round_and_save(file_path):
+				print("Downloaded and prepared image")
+			else:
+				file_path = ss.image_cache + ".no_album"
+				print("Error while preparing image")
 		if not exists(file_path):
 			return None
 		return file_path

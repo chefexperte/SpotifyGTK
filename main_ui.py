@@ -19,7 +19,7 @@ class SpotifyGtkUI:
 	position_slider: Gtk.Scale = None
 	loudness_slider: Gtk.Scale = None
 	upper_box: Gtk.Box = None
-	track_title: Gtk.Label = None
+	track_title: Gtk.Button = None
 	track_artists: Gtk.Box = None
 	track_image: Gtk.Image = None
 	loading_box: Gtk.Box = None
@@ -59,22 +59,29 @@ class SpotifyGtkUI:
 		self.upper_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
 		self.upper_box.add_css_class("toolbar")
 		self.upper_box.add_css_class("osd")
-		self.upper_box.set_margin_bottom(15)
+		self.upper_box.set_margin_bottom(20)
 		self.upper_box.set_margin_start(15)
 		self.upper_box.set_margin_end(15)
-		self.upper_box.set_margin_top(15)
-		self.track_title = Gtk.Label(label="Loading...")
+		self.upper_box.set_margin_top(20)
+		self.track_title = Gtk.Button(label="Loading...")
+		self.track_title.add_css_class("track_title")
+		self.track_title.add_css_class("flat")
+		self.track_title.set_hexpand(False)
 		pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(filename=ss.image_cache + ".no_album", width=200, height=200,
 		                                                 preserve_aspect_ratio=True)
 		self.track_image = Gtk.Image.new_from_pixbuf(pixbuf)
 		self.track_image.set_vexpand(True)
+		self.track_image.set_margin_start(-5)
 		# self.track_image.set_hexpand(True)
 		self.track_image.set_size_request(100, 100)
 		self.upper_box.append(self.track_image)
 		title_artist_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-		title_artist_box.append(self.track_title)
+		title_box = Gtk.Box()
+		title_box.set_hexpand(False)
+		title_box.append(self.track_title)
+		title_artist_box.append(title_box)
 		self.track_artists = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-		self.track_artists.append(Gtk.Button(label="ARTIST 1"))
+		# self.track_artists.append(Gtk.Button(label="ARTIST 1"))
 		title_artist_box.append(self.track_artists)
 		self.upper_box.append(title_artist_box)
 
@@ -90,13 +97,27 @@ class SpotifyGtkUI:
 		player_box.set_margin_top(15)
 		player_box.set_size_request(500, 0)
 		player_controls = Gtk.Box()
-		player_controls.add_css_class("linked")
+		# player_controls.add_css_class("linked")
+		player_controls.add_css_class("osd")
+		player_controls.add_css_class("round")
+		player_controls.set_margin_top(5)
+		player_controls.set_margin_bottom(5)
 		self.previous_button = Gtk.Button(icon_name="media-skip-backward-symbolic")
 		self.play_button = Gtk.Button(icon_name="media-playback-pause-symbolic")
 		self.play_button.connect("clicked", self.toggle_play)
-		self.play_button.set_sensitive(False)
+		# self.play_button.set_sensitive(False)
 		self.next_button = Gtk.Button(icon_name="media-skip-forward-symbolic")
+
+		self.play_button.add_css_class("play-button")
+		self.play_button.add_css_class("no-vert-padding")
+		self.play_button.set_size_request(40, 40)
+		self.previous_button.add_css_class("no-vert-padding")
+		self.previous_button.set_size_request(40, 40)
+		self.next_button.add_css_class("no-vert-padding")
+		self.next_button.set_size_request(40, 40)
+
 		self.play_button.add_css_class("circular")
+		self.play_button.add_css_class("raised")
 		self.previous_button.add_css_class("circular")
 		self.next_button.add_css_class("circular")
 		player_controls.append(self.previous_button)
@@ -172,6 +193,8 @@ class SpotifyGtkUI:
 		self.controllable_widgets.append(self.loudness_slider)
 		self.controllable_widgets.append(self.next_button)
 		self.controllable_widgets.append(self.previous_button)
+		self.controllable_widgets.append(self.track_title)
+		self.controllable_widgets.append(self.track_artists)
 		for widget in self.controllable_widgets:
 			if widget is None:
 				print(str(widget) + " is None.")
@@ -199,7 +222,7 @@ class SpotifyGtkUI:
 			percent = (info.position / info.duration) * 100
 		if not self.position_change_delay or not self.position_change_delay.is_running():
 			self.position_slider.set_value(percent)
-		self.track_title.set_text(info.title)
+		self.track_title.set_label(info.title)
 		if info.playing:
 			if self.play_state_change_delay is None or not self.play_state_change_delay.is_running():
 				self.play_button.set_icon_name("media-playback-pause-symbolic")
@@ -241,6 +264,17 @@ class SpotifyGtkUI:
 		self.loading_label.set_text(message)
 
 	def get_track_info(self, track_info: TrackData):
+		had_child = True
+		while had_child is True:
+			had_child = False
+			# noinspection PyTypeChecker
+			for child in self.track_artists:
+				self.track_artists.remove(child)
+				had_child = True
+		for artist in track_info.artists:
+			artist_button = Gtk.Button(label=artist.name)
+			artist_button.set_margin_start(5)
+			self.track_artists.append(artist_button)
 		print("New track data loaded")
 		file_name = track_info.get_image()
 		if file_name is not None:
