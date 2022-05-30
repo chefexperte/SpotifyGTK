@@ -168,7 +168,11 @@ function playHere(device_id) {
         headers: {
             'Authorization': `Bearer ${_token}`
         }
-    }).then(() => {
+    }).then((res) => {
+        if (res.status === 404) {
+            // No playback to transfer available
+
+        }
         setReady(true);
     });
 }

@@ -38,3 +38,8 @@
     /*background-color: mix(@card_shade_color, #299429,0.5);*/
     color: @green_5;
 }
+.debug {
+    border-style: dashed;
+    border-width: 2px;
+    border-color: white;
+}
