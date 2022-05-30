@@ -25,11 +25,17 @@ class SpotifyGtkUI:
 	track_image: Gtk.Image = None
 	loading_box: Gtk.Box = None
 	main_box: Gtk.Box = None
+	player_box: Gtk.Box = None
+	artist_page: Gtk.Box = None
 	overlay_container: Gtk.Overlay = None
 	loading_spinner: Gtk.Spinner = None
 	loading_label: Gtk.Label = None
 	leaflet_container: Adw.Leaflet = None
-	artist_page: Gtk.Box = None
+
+	artist_image: Gtk.Image = None
+	artist_popularity: Gtk.ProgressBar = None
+	artist_follower: Gtk.Label = None
+	artist_name: Gtk.Label = None
 
 	callbacks: [()] = None
 	volume_change_delay: DelayedThread = None
@@ -74,7 +80,7 @@ class SpotifyGtkUI:
 		pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(filename=ss.image_cache + ".no_album", width=200, height=200,
 		                                                 preserve_aspect_ratio=True)
 		self.track_image = Gtk.Image.new_from_pixbuf(pixbuf)
-		self.track_image.set_vexpand(True)
+		# self.track_image.set_vexpand(True)
 		self.track_image.set_margin_start(-5)
 		# self.track_image.set_hexpand(True)
 		self.track_image.set_size_request(100, 100)
@@ -85,88 +91,20 @@ class SpotifyGtkUI:
 		title_box.append(self.track_title)
 		title_artist_box.append(title_box)
 		self.track_artists = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+		self.track_artists.set_margin_start(10)
 		# self.track_artists.append(Gtk.Button(label="ARTIST 1"))
 		title_artist_box.append(self.track_artists)
 		self.upper_box.append(title_artist_box)
 
 		# Playback bar
-		player_box = Gtk.Box()
-		player_box.add_css_class("toolbar")
-		player_box.add_css_class("osd")
-		player_box.set_vexpand(True)
-		player_box.set_valign(Gtk.Align.END)
-		player_box.set_margin_bottom(15)
-		player_box.set_margin_start(15)
-		player_box.set_margin_end(15)
-		player_box.set_margin_top(15)
-		player_box.set_size_request(500, 0)
-		player_controls = Gtk.Box()
-		# player_controls.add_css_class("linked")
-		player_controls.add_css_class("osd")
-		player_controls.add_css_class("round")
-		player_controls.set_margin_top(5)
-		player_controls.set_margin_bottom(5)
-		self.previous_button = Gtk.Button(icon_name="media-skip-backward-symbolic")
-		self.previous_button.connect("clicked", self.skip_previous)
-		self.play_button = Gtk.Button(icon_name="media-playback-pause-symbolic")
-		self.play_button.connect("clicked", self.toggle_play)
-		self.next_button = Gtk.Button(icon_name="media-skip-forward-symbolic")
-		self.next_button.connect("clicked", self.skip_next)
-
-		self.play_button.add_css_class("play-button")
-		self.play_button.add_css_class("no-vert-padding")
-		self.play_button.set_size_request(40, 40)
-		self.previous_button.add_css_class("no-vert-padding")
-		self.previous_button.set_size_request(40, 40)
-		self.next_button.add_css_class("no-vert-padding")
-		self.next_button.set_size_request(40, 40)
-
-		self.play_button.add_css_class("circular")
-		self.play_button.add_css_class("raised")
-		self.previous_button.add_css_class("circular")
-		self.next_button.add_css_class("circular")
-		player_controls.append(self.previous_button)
-		player_controls.append(self.play_button)
-		player_controls.append(self.next_button)
-		player_box.append(player_controls)
-		self.position_slider = Gtk.Scale()
-		self.position_slider.set_range(0, 100)
-		self.position_slider.set_hexpand(True)
-		self.position_slider.set_value(0)
-		self.position_slider.connect("change-value", lambda a, b, c: self.position_change())
-		player_box.append(self.position_slider)
-		volume_button_box = Gtk.EventControllerMotion()
-		volume_button = Gtk.Button(icon_name="audio-volume-high")
-		context = volume_button.get_style_context()
-		context.add_provider(css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
-		volume_button.add_controller(volume_button_box)
-		volume_button.add_css_class("circular")
-		volume_button.add_css_class("fadeout")
-		volume_button.set_vexpand(False)
-		volume_button.set_can_focus(False)
-		fixed = Gtk.Fixed()
-		fixed.set_valign(Gtk.Align.CENTER)
-		self.loudness_slider = Gtk.Scale()
-		self.loudness_slider.set_inverted(True)
-		self.loudness_slider.set_range(0, 100)
-		self.loudness_slider.set_hexpand(False)
-		self.loudness_slider.set_value(100)
-		self.loudness_slider.add_css_class("fadein")
-		self.loudness_slider.connect("value-changed", lambda a: self.volume_change())
-		player_box.append(self.loudness_slider)
+		self.create_playback_bar()
 
 		# Artist page
-		self.artist_page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-		artist_page_headerbar = Gtk.HeaderBar()
-		go_back_button = Gtk.Button(icon_name="go-previous-symbolic")
-		go_back_button.connect("clicked", lambda d: self.leaflet_container.navigate(Adw.NavigationDirection.BACK))
-		artist_page_headerbar.pack_start(go_back_button)
-		self.artist_page.append(artist_page_headerbar)
-		self.artist_page.append(Gtk.Label(label="Artist page"))
+		self.create_artist_page()
 
 		# Main box contains all content besides the headerbar
 		self.main_box.append(self.upper_box)
-		self.main_box.append(player_box)
+		self.main_box.append(self.player_box)
 		self.main_box.set_hexpand(True)
 		self.main_box.set_vexpand(True)
 
@@ -216,6 +154,7 @@ class SpotifyGtkUI:
 		self.controllable_widgets.append(self.previous_button)
 		self.controllable_widgets.append(self.track_title)
 		self.controllable_widgets.append(self.track_artists)
+		self.controllable_widgets.append(play_here_button)
 		for widget in self.controllable_widgets:
 			if widget is None:
 				print(str(widget) + " is None.")
@@ -224,8 +163,144 @@ class SpotifyGtkUI:
 
 		win.present()
 
+	def create_playback_bar(self):
+		self.player_box = Gtk.Box()
+		self.player_box.add_css_class("toolbar")
+		self.player_box.add_css_class("osd")
+		self.player_box.set_vexpand(True)
+		self.player_box.set_valign(Gtk.Align.END)
+		self.player_box.set_margin_bottom(15)
+		self.player_box.set_margin_start(15)
+		self.player_box.set_margin_end(15)
+		self.player_box.set_margin_top(15)
+		self.player_box.set_size_request(500, 0)
+		player_controls = Gtk.Box()
+		# player_controls.add_css_class("linked")
+		player_controls.add_css_class("osd")
+		player_controls.add_css_class("round")
+		player_controls.set_margin_top(5)
+		player_controls.set_margin_bottom(5)
+		self.previous_button = Gtk.Button(icon_name="media-skip-backward-symbolic")
+		self.previous_button.connect("clicked", self.skip_previous)
+		self.play_button = Gtk.Button(icon_name="media-playback-pause-symbolic")
+		self.play_button.connect("clicked", self.toggle_play)
+		self.next_button = Gtk.Button(icon_name="media-skip-forward-symbolic")
+		self.next_button.connect("clicked", self.skip_next)
+
+		self.play_button.add_css_class("play-button")
+		self.play_button.add_css_class("no-vert-padding")
+		self.play_button.set_size_request(40, 40)
+		self.previous_button.add_css_class("no-vert-padding")
+		self.previous_button.set_size_request(40, 40)
+		self.next_button.add_css_class("no-vert-padding")
+		self.next_button.set_size_request(40, 40)
+
+		self.play_button.add_css_class("circular")
+		self.play_button.add_css_class("raised")
+		self.previous_button.add_css_class("circular")
+		self.next_button.add_css_class("circular")
+		player_controls.append(self.previous_button)
+		player_controls.append(self.play_button)
+		player_controls.append(self.next_button)
+		self.player_box.append(player_controls)
+		self.position_slider = Gtk.Scale()
+		self.position_slider.set_range(0, 100)
+		self.position_slider.set_hexpand(True)
+		self.position_slider.set_value(0)
+		self.position_slider.connect("change-value", lambda a, b, c: self.position_change())
+		self.player_box.append(self.position_slider)
+		volume_button_box = Gtk.EventControllerMotion()
+		volume_button = Gtk.Button(icon_name="audio-volume-high")
+		context = volume_button.get_style_context()
+		context.add_provider(css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
+		volume_button.add_controller(volume_button_box)
+		volume_button.add_css_class("circular")
+		volume_button.add_css_class("fadeout")
+		volume_button.set_vexpand(False)
+		volume_button.set_can_focus(False)
+		self.loudness_slider = Gtk.Scale()
+		self.loudness_slider.set_inverted(True)
+		self.loudness_slider.set_range(0, 100)
+		self.loudness_slider.set_hexpand(False)
+		self.loudness_slider.set_value(100)
+		self.loudness_slider.add_css_class("fadein")
+		self.loudness_slider.connect("value-changed", lambda a: self.volume_change())
+		self.player_box.append(self.loudness_slider)
+
+	def create_artist_page(self):
+		self.artist_page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+		artist_page_headerbar = Gtk.HeaderBar()
+		go_back_button = Gtk.Button(icon_name="go-previous-symbolic")
+		go_back_button.connect("clicked", lambda d: self.leaflet_container.navigate(Adw.NavigationDirection.BACK))
+		artist_page_headerbar.pack_start(go_back_button)
+		artist_page_content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+
+		pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(filename=ss.image_cache + ".no_album", width=200, height=200,
+		                                                 preserve_aspect_ratio=True)
+		self.artist_image = Gtk.Image.new_from_pixbuf(pixbuf)
+		self.artist_image.set_size_request(100, 100)
+		artist_name_pop_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+		artist_name_pop_box.set_hexpand(True)
+		artist_name_pop_follower_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+		# artist_name_pop_follower_box.set_halign(Gtk.Align.START)
+		artist_name_pop_follower_box.set_margin_start(5)
+		artist_name_pop_follower_box.set_margin_end(10)
+		artist_name_pop_follower_box.set_margin_top(10)
+		artist_name_pop_follower_box.set_margin_bottom(10)
+		artist_name_pop_follower_box.set_hexpand(True)
+		artist_name_pop_follower_image_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+		artist_name_pop_follower_image_box.set_margin_start(10)
+		artist_name_pop_follower_image_box.set_margin_end(10)
+		artist_name_pop_follower_image_box.set_margin_top(10)
+		artist_name_pop_follower_image_box.set_margin_bottom(10)
+		artist_name_pop_follower_image_box.set_hexpand(True)
+		artist_page_topline = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+		self.artist_name = Gtk.Label(label="Artist Name")
+		self.artist_name.add_css_class("title-1")
+		# artist_name.set_valign(Gtk.Align.CENTER)
+		self.artist_name.set_margin_end(25)
+		artist_popularity_box = Gtk.Box()
+		self.artist_popularity = Gtk.ProgressBar()
+		self.artist_popularity.set_halign(Gtk.Align.END)
+		self.artist_popularity.set_valign(Gtk.Align.CENTER)
+		self.artist_popularity.set_fraction(0.75)
+		artist_popularity_box.append(self.artist_popularity)
+		artist_popularity_box.set_hexpand(True)
+		artist_popularity_box.set_halign(Gtk.Align.END)
+		artist_name_pop_box.append(self.artist_name)
+		artist_name_pop_box.append(artist_popularity_box)
+		artist_name_pop_follower_box.append(artist_name_pop_box)
+		self.artist_follower = Gtk.Label(label="69,420 follower")
+		self.artist_follower.set_halign(Gtk.Align.START)
+		artist_name_pop_follower_box.append(self.artist_follower)
+		artist_name_pop_follower_image_box.append(self.artist_image)
+		artist_name_pop_follower_image_box.append(artist_name_pop_follower_box)
+
+		artist_page_topline.append(artist_name_pop_follower_image_box)
+		artist_genres = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+		# artist_genres.append(Gtk.Button(label="Genre"))
+		# artist_genres.append(Gtk.Button(label="Other Genre"))
+		# artist_page_topline.append(artist_genres)
+		artist_name_pop_follower_box.append(artist_genres)
+
+		artist_page_content.append(artist_page_topline)
+		sep = Gtk.Separator()
+		sep.set_margin_top(5)
+		sep.set_margin_end(5)
+		artist_page_content.append(sep)
+		artist_page_content.append(Gtk.Label(label="Top Tracks here?"))
+
+		# artist_popularity_box.add_css_class("debug")
+		# artist_name_pop_follower_box.add_css_class("debug")
+		# artist_name_pop_follower_image_box.add_css_class("debug")
+		# artist_name_pop_box.add_css_class("debug")
+
+		self.artist_page.append(artist_page_headerbar)
+		self.artist_page.append(artist_page_content)
+
 	def backend_ready_callback(self):
 		def f(): GLib.idle_add(self.backend_ready)
+
 		DelayedThread(f, [], 400)
 		self.update_loading_message("Ready!")
 		self.loading_spinner.stop()
@@ -238,6 +313,7 @@ class SpotifyGtkUI:
 			self.main_box.remove_css_class("blur")
 			self.overlay_container.remove_overlay(self.loading_box)
 			self.device_ready = True
+
 		GLib.idle_add(set_ready)
 
 	def report_state_callback(self, info: PlaybackInfo):
@@ -300,22 +376,49 @@ class SpotifyGtkUI:
 					self.track_artists.remove(child)
 					had_child = True
 			for artist in track_info.artists:
-				artist_button = Gtk.Button(label=artist.name)
-				artist_button.connect("clicked", lambda d: self.leaflet_container.navigate(Adw.NavigationDirection.FORWARD))
-				artist_button.set_margin_start(5)
+				artist_button = ArtistButton(label=artist.name)
+				artist_button.data_id = artist.data_id
+
+				def artist_button_action(d, data_id: str):
+					self.update_artist_page(data_id, lambda: self.leaflet_container.navigate(Adw.NavigationDirection.FORWARD))
+				artist_button.connect("clicked", artist_button_action, artist.data_id)
+				artist_button.set_margin_end(5)
 				self.track_artists.append(artist_button)
+
 		GLib.idle_add(set_data)
 		print("New track data loaded")
-		file_name = track_info.get_image()
+		self.try_set_image(self.track_image, track_info)
+
+	def update_artist_page(self, artist_id: str, on_success: ()):
+		def load_data():
+			artist_data = tools.data_tools.get_artist_info(artist_id)
+			if artist_data is None:
+				print("Received None as artist_data")
+				return
+
+			def update_widgets():
+				self.artist_name.set_label(artist_data.name)
+				self.artist_popularity.set_fraction(artist_data.popularity / 100)
+				self.artist_follower.set_label(f"{artist_data.followers} follower")
+			GLib.idle_add(update_widgets)
+			if self.try_set_image(self.artist_image, artist_data):
+				on_success()
+		DelayedThread(load_data, [], 1)
+
+	def try_set_image(self, image_widget: Gtk.Image, data: DataWithImage):
+		file_name = data.get_image()
 		if file_name is not None:
 			def set_image():
 				pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(filename=file_name, width=200, height=200,
 				                                                 preserve_aspect_ratio=True)
-				self.track_image.set_from_pixbuf(pixbuf)
+				image_widget.set_from_pixbuf(pixbuf)
+
 			GLib.idle_add(set_image)
-			print("New image set")
+			# print("New image set")
+			return True
 		else:
 			print("Could not load file :(")
+		return False
 
 	def skip_next(self, d):
 		self.callbacks["skip_next"]()
