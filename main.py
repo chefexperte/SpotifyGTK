@@ -49,11 +49,11 @@ class SpotifyGTK:
 		"""
 		self.server.run(self.callbacks)
 
-	def run_web_controller(self):
+	def run_web_controller(self, headless):
 		"""
 		This method starts the selenium web controller with the callbacks variable
 		"""
-		self.controller.run_controller(self.callbacks)
+		self.controller.run_controller(self.callbacks, headless)
 
 	def run_ui(self):
 		"""
@@ -99,7 +99,7 @@ class SpotifyGTK:
 	def skip_previous(self):
 		Thread(target=self.controller.skip_previous, args=[]).start()
 
-	def run(self):
+	def run(self, headless):
 		path = os.getcwd()
 		os.environ["PATH"] += os.pathsep + path
 		# mail = input("\nEmail: ")
@@ -122,7 +122,7 @@ class SpotifyGTK:
 		self.controller = WebController()
 		self.window = SpotifyGtkUI()
 		srv = Thread(target=self.run_server, args=[])
-		ctl = Thread(target=self.run_web_controller, args=[])
+		ctl = Thread(target=self.run_web_controller, args=[headless])
 		uiw = Thread(target=self.run_ui, args=[])
 
 		srv.start()
@@ -146,4 +146,8 @@ class SpotifyGTK:
 
 if __name__ == "__main__":
 	app = SpotifyGTK()
-	app.run()
+	headless = True
+	if len(sys.argv) == 2:
+		if sys.argv[1] == "--non-headless":
+			headless = False
+	app.run(headless=headless)
