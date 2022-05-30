@@ -9,7 +9,7 @@ from thread_tools.delayed_thread import DelayedThread
 
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
-from gi.repository import Gtk, Adw, GdkPixbuf
+from gi.repository import Gtk, Adw, GdkPixbuf, GLib
 
 
 class SpotifyGtkUI:
@@ -26,6 +26,10 @@ class SpotifyGtkUI:
 	main_box: Gtk.Box = None
 	overlay_container: Gtk.Overlay = None
 	loading_spinner: Gtk.Spinner = None
+	loading_label: Gtk.Label = None
+	leaflet_container: Adw.Leaflet = None
+	artist_page: Gtk.Box = None
+
 	callbacks: [()] = None
 	volume_change_delay: DelayedThread = None
 	position_change_delay: DelayedThread = None
@@ -34,7 +38,6 @@ class SpotifyGtkUI:
 	is_playing = False
 	device_ready = False
 	controllable_widgets: [Gtk.Widget] = None
-	loading_label: Gtk.Label = None
 
 	def __init__(self):
 		self.file_dir = os.path.dirname(os.path.abspath(__file__))
@@ -151,12 +154,22 @@ class SpotifyGtkUI:
 		self.loudness_slider.connect("value-changed", lambda a: self.volume_change())
 		player_box.append(self.loudness_slider)
 
+		# Artist page
+		self.artist_page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+		artist_page_headerbar = Gtk.HeaderBar()
+		go_back_button = Gtk.Button(icon_name="go-previous-symbolic")
+		go_back_button.connect("clicked", lambda d: self.leaflet_container.navigate(Adw.NavigationDirection.BACK))
+		artist_page_headerbar.pack_start(go_back_button)
+		self.artist_page.append(artist_page_headerbar)
+		self.artist_page.append(Gtk.Label(label="Artist page"))
+
 		# Main box contains all content besides the headerbar
 		self.main_box.append(self.upper_box)
 		self.main_box.append(player_box)
 		self.main_box.set_hexpand(True)
 		self.main_box.set_vexpand(True)
 
+		# Overlay container for loading screen
 		self.overlay_container = Gtk.Overlay()
 		self.overlay_container.set_hexpand(True)
 		self.overlay_container.set_vexpand(True)
@@ -182,9 +195,15 @@ class SpotifyGtkUI:
 		window_box.append(headerbar)
 		window_box.append(self.overlay_container)
 
-		win.set_content(window_box)
+		self.leaflet_container = Adw.Leaflet()
+		self.leaflet_container.set_can_navigate_back(True)
+		self.leaflet_container.set_can_unfold(False)
+		self.leaflet_container.append(window_box)
+		self.leaflet_container.append(self.artist_page)
 
-		add_styling({window_box})
+		win.set_content(self.leaflet_container)
+
+		add_styling({self.leaflet_container})
 
 		win.connect("close-request", lambda x: win.destroy())
 		win.set_title("SpotifyGTK")
@@ -205,7 +224,8 @@ class SpotifyGtkUI:
 		win.present()
 
 	def backend_ready_callback(self):
-		DelayedThread(self.backend_ready, [], 400)
+		def f(): GLib.idle_add(self.backend_ready)
+		DelayedThread(f, [], 400)
 		self.update_loading_message("Ready!")
 		self.loading_spinner.stop()
 
