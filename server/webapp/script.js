@@ -64,22 +64,29 @@ const scopes = [
 ];
 
 let extPlayerData = null;
+let canBeReadyElements = ["setVolume", "playHere", "togglePlay", "setPosition", "skipNext", "skipPrevious"]
 
 function setReady(ready) {
     if (isReady && !ready) {
         //state change from ready to not ready
         isReady = false;
-        window.document.getElementById("setVolume").disabled = true;
-        window.document.getElementById("playHere").disabled = true;
-        window.document.getElementById("togglePlay").disabled = true;
-        window.document.getElementById("setPosition").disabled = true;
+        for (let element of canBeReadyElements) {
+            if (!!window.document.getElementById(element)) {
+                window.document.getElementById(element).disabled = true;
+            } else {
+                console.log(element + " does not exist.")
+            }
+        }
     } else if (!isReady && ready) {
         //state change from not ready to ready
         isReady = true;
-        window.document.getElementById("setVolume").disabled = false;
-        window.document.getElementById("playHere").disabled = false;
-        window.document.getElementById("togglePlay").disabled = false;
-        window.document.getElementById("setPosition").disabled = false;
+        for (let element of canBeReadyElements) {
+            if (!!window.document.getElementById(element)) {
+                window.document.getElementById(element).disabled = false;
+            } else {
+                console.log(element + " does not exist.")
+            }
+        }
     }
 }
 
@@ -213,6 +220,38 @@ function setPosition(player) {
     });
 }
 
+function skipNext(player) {
+    player.getCurrentState().then(state => {
+        // noinspection JSUnresolvedVariable
+        if (!state || state.playback_id === "") {
+            fetch(`${apiEndpoint}/me/player/next`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${_token}`
+                }
+            }).then();
+        } else {
+            player.nextTrack();
+        }
+    });
+}
+
+function skipPrevious(player) {
+    player.getCurrentState().then(state => {
+        // noinspection JSUnresolvedVariable
+        if (!state || state.playback_id === "") {
+            fetch(`${apiEndpoint}/me/player/previous`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${_token}`
+                }
+            }).then();
+        } else {
+            player.previousTrack();
+        }
+    });
+}
+
 function setMediaInformation(title, artist) {
     if ('mediaSession' in navigator) {
         navigator.mediaSession.metadata = new MediaMetadata({
@@ -252,9 +291,17 @@ window.onSpotifyWebPlaybackSDKReady = () => {
         document.getElementById('setPosition').onclick = function () {
             setPosition(player)
         };
+        // skip to next track
+        document.getElementById('skipNext').onclick = function () {
+            skipNext(player)
+        };
+        // skip to previous track
+        document.getElementById('skipPrevious').onclick = function () {
+            skipPrevious(player)
+        };
         // report state loop will put information on the page every second
         let timer;
-        let name, position, duration, isPlaying, trackID;
+        let name, position, duration, isPlaying, trackID, currentTrackData;
         let reportState = async function () {
             let next_report = 1000;
             if (Date.now() / 1000 > _expire) {
@@ -273,6 +320,7 @@ window.onSpotifyWebPlaybackSDKReady = () => {
                         // noinspection JSUnresolvedVariable
                         duration = extPlayerData.item.duration_ms;
                         trackID = extPlayerData.item.id;
+                        currentTrackData = extPlayerData.item
                     }
                     // noinspection JSUnresolvedVariable
                     position = extPlayerData.progress_ms;
@@ -288,14 +336,8 @@ window.onSpotifyWebPlaybackSDKReady = () => {
                         name = state.track_window.current_track.name
                         // noinspection JSUnresolvedVariable
                         trackID = state.track_window.current_track.id
-                        if (document.getElementById("trackID").innerText !== trackID) {
-                            let data = new FormData();
-                            data.append("data",  JSON.stringify(state.track_window.current_track));
-                            console.log(state.track_window.current_track)
-                            let xhr = new XMLHttpRequest();
-                            await xhr.open('post', 'save_track_info.py', false);
-                            await xhr.send(data);
-                        }
+                        // noinspection JSUnresolvedVariable
+                        currentTrackData = state.track_window.current_track
                     }
                     position = state.position;
                     duration = state.duration;
@@ -305,6 +347,14 @@ window.onSpotifyWebPlaybackSDKReady = () => {
                     next_report = 800;
                 }
             });
+            if (document.getElementById("trackID").innerText !== trackID && currentTrackData != null) {
+                let data = new FormData();
+                data.append("data", JSON.stringify(currentTrackData));
+                // console.log(currentTrackData)
+                let xhr = new XMLHttpRequest();
+                await xhr.open('post', 'save_track_info.py', false);
+                await xhr.send(data);
+            }
             document.title = name;
             document.getElementById("trackTitle").innerText = name;
             document.getElementById("position").innerText = position;

@@ -103,10 +103,12 @@ class SpotifyGtkUI:
 		player_controls.set_margin_top(5)
 		player_controls.set_margin_bottom(5)
 		self.previous_button = Gtk.Button(icon_name="media-skip-backward-symbolic")
+		self.previous_button.connect("clicked", self.skip_previous)
 		self.play_button = Gtk.Button(icon_name="media-playback-pause-symbolic")
 		self.play_button.connect("clicked", self.toggle_play)
 		# self.play_button.set_sensitive(False)
 		self.next_button = Gtk.Button(icon_name="media-skip-forward-symbolic")
+		self.next_button.connect("clicked", self.skip_next)
 
 		self.play_button.add_css_class("play-button")
 		self.play_button.add_css_class("no-vert-padding")
@@ -222,7 +224,8 @@ class SpotifyGtkUI:
 			percent = (info.position / info.duration) * 100
 		if not self.position_change_delay or not self.position_change_delay.is_running():
 			self.position_slider.set_value(percent)
-		self.track_title.set_label(info.title)
+		# Since we're now doing this with get_track_info() I think we could remove this
+		# self.track_title.set_label(info.title)
 		if info.playing:
 			if self.play_state_change_delay is None or not self.play_state_change_delay.is_running():
 				self.play_button.set_icon_name("media-playback-pause-symbolic")
@@ -284,6 +287,12 @@ class SpotifyGtkUI:
 			print("New image set")
 		else:
 			print("Could not load file :(")
+
+	def skip_next(self, d):
+		self.callbacks["skip_next"]()
+
+	def skip_previous(self, d):
+		self.callbacks["skip_previous"]()
 
 	def run_ui(self, callbacks):
 		self.callbacks = callbacks

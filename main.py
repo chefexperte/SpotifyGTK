@@ -38,7 +38,9 @@ class SpotifyGTK:
 		                  "set_position": lambda pos: self.set_position(pos),
 		                  "play_here": lambda: self.play_here(),
 		                  "update_loading_message": lambda message: self.update_loading_message(message),
-		                  "get_track_info": lambda track_info: self.get_track_info(track_info)
+		                  "get_track_info": lambda track_info: self.get_track_info(track_info),
+		                  "skip_next": lambda: self.skip_next(),
+		                  "skip_previous": lambda: self.skip_previous()
 		                  }
 
 	def run_server(self):
@@ -90,6 +92,12 @@ class SpotifyGTK:
 
 	def get_track_info(self, track_info: TrackData):
 		self.window.get_track_info(track_info)
+
+	def skip_next(self):
+		Thread(target=self.controller.skip_next, args=[]).start()
+
+	def skip_previous(self):
+		Thread(target=self.controller.skip_previous, args=[]).start()
 
 	def run(self):
 		path = os.getcwd()

@@ -159,6 +159,14 @@ class WebController:
             self.driver.find_element(By.ID, "playbackPosition").send_keys(int(position))
             self.driver.find_element(By.ID, "setPosition").click()
 
+    def skip_next(self):
+        if self.element_exists(By.ID, "skipNext"):
+            self.driver.find_element(By.ID, "skipNext").click()
+
+    def skip_previous(self):
+        if self.element_exists(By.ID, "skipPrevious"):
+            self.driver.find_element(By.ID, "skipPrevious").click()
+
 
 if __name__ == "__main__":
     username = ""
