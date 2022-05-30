@@ -6,8 +6,7 @@ from threading import Thread
 from time import sleep
 
 import auth_controller
-from data_wrapper import TrackData
-from playback_info import PlaybackInfo
+from tools.data_wrapper import TrackData, PlaybackInfo
 from web_controller import WebController
 from main_ui import SpotifyGtkUI
 from server.webserver import Webserver

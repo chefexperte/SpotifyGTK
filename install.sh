@@ -15,3 +15,4 @@ pip install selenium
 pip install pygobject
 pip install opencv-python
 pip install numpy
+pip install requests

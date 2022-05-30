@@ -3,8 +3,9 @@ import os
 import gi
 
 import static_strings as ss
-from data_wrapper import TrackData
-from playback_info import PlaybackInfo
+import tools.data_tools
+from tools.data_wrapper import TrackData, PlaybackInfo, DataWithImage
+from special_widgets import ArtistButton
 from thread_tools.delayed_thread import DelayedThread
 
 gi.require_version('Gtk', '4.0')

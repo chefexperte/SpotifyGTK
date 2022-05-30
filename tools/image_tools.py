@@ -75,7 +75,7 @@ def round_and_save(file: str):
 
 
 if __name__ == "__main__":
-	img = cv2.imread('image_cache/ab67616d00001e0274f062e52719ab05b992eecc')
+	img = cv2.imread('../image_cache/ab67616d00001e0274f062e52719ab05b992eecc')
 	# cv2.imshow('img', img)
 
 	new_img = round_corners(img, 20, 0, (0, 0, 0))

@@ -9,7 +9,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.support.wait import WebDriverWait
 
-from playback_info import PlaybackInfo
+from tools.data_wrapper import PlaybackInfo
 
 
 class WebController:
@@ -89,14 +89,20 @@ class WebController:
                 return True
         return False
 
-    def run_controller(self, callbacks: [()]):
+    def run_controller(self, callbacks: [()], headless: bool):
         self.callbacks = callbacks
         options = Options()
         options.set_preference("media.eme.enabled", True)
         options.set_preference("media.gmp-manager.updateEnabled", True)
-        options.add_argument('--headless')
-        # options.add_argument('--profile')
+        options.set_preference("browser.cache.check_doc_frequency", 1)
+        # options.set_preference("security.sandbox.content.level", 0)
+        if headless:
+            options.add_argument('--headless')
+        options.add_argument('--profile')
+        # path = os.path.dirname(os.path.abspath(__file__))
         # options.add_argument(path + '/firefox-profile')
+        options.add_argument('/home/aaron/.mozilla/firefox/spotifygtk-profile')
+
         # options.add_argument('--P')
         # options.log.level = "trace"
         self.driver = webdriver.Firefox(options=options)

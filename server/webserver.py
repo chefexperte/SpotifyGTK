@@ -6,7 +6,7 @@ from os import getcwd
 # get path of file
 # local_path = os.path.dirname(os.path.abspath(__file__))
 # setting ip and port
-from server.save_track_info import send_track_info
+from tools.data_tools import send_track_info
 
 hostName = "localhost"
 serverPort = 8080
@@ -79,8 +79,8 @@ def prepare_cgi_list():
 	MyServer.cgi_list = []
 	for file in os.listdir("cgi-files"):
 		MyServer.cgi_list.append(file)
-	print("CGI scripts: ")
-	[print(name) for name in MyServer.cgi_list]
+	# print("CGI scripts: ")
+	# [print(name) for name in MyServer.cgi_list]
 
 
 class Webserver:
