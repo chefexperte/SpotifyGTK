@@ -230,11 +230,14 @@ class SpotifyGtkUI:
 		self.loading_spinner.stop()
 
 	def backend_ready(self):
-		for widget in self.controllable_widgets:
-			widget.set_sensitive(True)
-		self.main_box.remove_css_class("blur")
-		self.overlay_container.remove_overlay(self.loading_box)
-		self.device_ready = True
+		def set_ready():
+			self.track_title.set_label("No song loaded.")
+			for widget in self.controllable_widgets:
+				widget.set_sensitive(True)
+			self.main_box.remove_css_class("blur")
+			self.overlay_container.remove_overlay(self.loading_box)
+			self.device_ready = True
+		GLib.idle_add(set_ready)
 
 	def report_state_callback(self, info: PlaybackInfo):
 		self.track_duration = info.duration
