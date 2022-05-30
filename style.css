@@ -35,5 +35,6 @@
     margin-bottom: 0;
 }
 .play-button {
-    background-color: mix(@card_shade_color,#187018,0.5);
+    /*background-color: mix(@card_shade_color, #299429,0.5);*/
+    color: @green_5;
 }

@@ -1,9 +1,16 @@
 import json
+from json import JSONDecodeError
+
 from data_wrapper import Artist, TrackData
 
 
 def send_track_info(json_str: str, callback: ()):
-	data = json.loads(json_str)
+	try:
+		data = json.loads(json_str)
+	except JSONDecodeError:
+		print("JSON was malformatted")
+		print(json_str)
+		return
 	title = data["name"]
 	artists: [Artist] = []
 	for artist in data["artists"]:

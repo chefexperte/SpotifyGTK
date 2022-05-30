@@ -106,7 +106,6 @@ class SpotifyGtkUI:
 		self.previous_button.connect("clicked", self.skip_previous)
 		self.play_button = Gtk.Button(icon_name="media-playback-pause-symbolic")
 		self.play_button.connect("clicked", self.toggle_play)
-		# self.play_button.set_sensitive(False)
 		self.next_button = Gtk.Button(icon_name="media-skip-forward-symbolic")
 		self.next_button.connect("clicked", self.skip_next)
 
@@ -267,23 +266,29 @@ class SpotifyGtkUI:
 		self.loading_label.set_text(message)
 
 	def get_track_info(self, track_info: TrackData):
-		had_child = True
-		while had_child is True:
-			had_child = False
-			# noinspection PyTypeChecker
-			for child in self.track_artists:
-				self.track_artists.remove(child)
-				had_child = True
-		for artist in track_info.artists:
-			artist_button = Gtk.Button(label=artist.name)
-			artist_button.set_margin_start(5)
-			self.track_artists.append(artist_button)
+		def set_data():
+			self.track_title.set_label(track_info.name)
+			had_child = True
+			while had_child is True:
+				had_child = False
+				# noinspection PyTypeChecker
+				for child in self.track_artists:
+					self.track_artists.remove(child)
+					had_child = True
+			for artist in track_info.artists:
+				artist_button = Gtk.Button(label=artist.name)
+				artist_button.connect("clicked", lambda d: self.leaflet_container.navigate(Adw.NavigationDirection.FORWARD))
+				artist_button.set_margin_start(5)
+				self.track_artists.append(artist_button)
+		GLib.idle_add(set_data)
 		print("New track data loaded")
 		file_name = track_info.get_image()
 		if file_name is not None:
-			pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(filename=file_name, width=200, height=200,
-			                                                 preserve_aspect_ratio=True)
-			self.track_image.set_from_pixbuf(pixbuf)
+			def set_image():
+				pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(filename=file_name, width=200, height=200,
+				                                                 preserve_aspect_ratio=True)
+				self.track_image.set_from_pixbuf(pixbuf)
+			GLib.idle_add(set_image)
 			print("New image set")
 		else:
 			print("Could not load file :(")
